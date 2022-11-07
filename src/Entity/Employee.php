@@ -26,6 +26,9 @@ class Employee
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
 
+    #[ORM\OneToOne(mappedBy: 'employees', cascade: ['persist', 'remove'])]
+    private ?User $user = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -75,6 +78,28 @@ class Employee
     public function setCreatedAt(\DateTimeInterface $createdAt): self
     {
         $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): self
+    {
+        // unset the owning side of the relation if necessary
+        if ($user === null && $this->user !== null) {
+            $this->user->setEmployees(null);
+        }
+
+        // set the owning side of the relation if necessary
+        if ($user !== null && $user->getEmployees() !== $this) {
+            $user->setEmployees($this);
+        }
+
+        $this->user = $user;
 
         return $this;
     }
