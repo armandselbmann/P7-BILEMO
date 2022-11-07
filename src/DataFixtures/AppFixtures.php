@@ -3,6 +3,7 @@
 namespace App\DataFixtures;
 
 use App\Entity\Customer;
+use App\Entity\CustomerUser;
 use App\Entity\Image;
 use App\Entity\Product;
 use Doctrine\Bundle\FixturesBundle\Fixture;
@@ -201,6 +202,22 @@ class AppFixtures extends Fixture
             $customer->setTVANumber($faker->vat);
             $customer->setSIRET($faker->siret);
             $customer->setCreatedAt($faker->dateTimeBetween('-1 year', 'now' ));
+
+            for ($j=0; $j < 20; $j++) {
+                $customerUser = new CustomerUser();
+                $customerUser->setLastName($faker->lastName);
+                $customerUser->setFirstName($faker->firstName);
+                $customerUser->setEmail($faker->email);
+                $customerUser->setPostalCode($faker->postcode);
+                $customerUser->setAdress($faker->streetAddress);
+                $customerUser->setCity($faker->city);
+                $customerUser->setCountry('France');
+                $customerUser->setPhone($faker->phoneNumber);
+                $customerUser->setCustomers($customer);
+                $customerUser->setCreatedAt($faker->dateTimeBetween('-1 year', 'now' ));
+
+                $manager->persist($customerUser);
+            }
 
             $manager->persist($customer);
 
