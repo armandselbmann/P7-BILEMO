@@ -7,12 +7,20 @@ use App\Entity\CustomerUser;
 use App\Entity\Employee;
 use App\Entity\Image;
 use App\Entity\Product;
+use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class AppFixtures extends Fixture
 {
+    private UserPasswordHasherInterface $userPasswordHasher;
+
+    public function __construct(UserPasswordHasherInterface $userPasswordHasher)
+    {
+        $this->userPasswordHasher = $userPasswordHasher;
+    }
 
     public function load(ObjectManager $manager): void
     {
@@ -187,7 +195,7 @@ class AppFixtures extends Fixture
             $manager->persist($product);
         }
 
-        // Customer
+        // Customer & CustomerUser
         for ($i=0; $i < 4; $i++) {
             $customer = new Customer;
             $customer->setSociety($faker->company);
@@ -218,6 +226,14 @@ class AppFixtures extends Fixture
                 $manager->persist($customerUser);
             }
             $manager->persist($customer);
+
+            $user = new User();
+            $user->setEmail('customer'.($i+1).'@bilemoapi.com');
+            $user->setPassword($this->userPasswordHasher->hashPassword($user, 'password'.($i+1)));
+            $user->setRoles(["ROLE_USER"]);
+            $user->setCustomers($customer);
+
+            $manager->persist($user);
         }
 
         // Employee
@@ -228,6 +244,14 @@ class AppFixtures extends Fixture
         $employee->setCreatedAt($faker->dateTimeBetween('-1 year', 'now' ));
 
         $manager->persist($employee);
+
+        $user = new User();
+        $user->setEmail('employee@bilemoapi.com');
+        $user->setPassword($this->userPasswordHasher->hashPassword($user, 'password'));
+        $user->setRoles(["ROLE_ADMIN"]);
+        $user->setEmployees($employee);
+
+        $manager->persist($user);
 
         $manager->flush();
     }
