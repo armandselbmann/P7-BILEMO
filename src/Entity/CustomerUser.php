@@ -2,14 +2,12 @@
 
 namespace App\Entity;
 
-use App\Repository\CustomerRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
+use App\Repository\CustomerUserRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: CustomerRepository::class)]
-class Customer
+#[ORM\Entity(repositoryClass: CustomerUserRepository::class)]
+class CustomerUser
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -17,13 +15,13 @@ class Customer
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $society = null;
-
-    #[ORM\Column(length: 255)]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
     private ?string $firstName = null;
+
+    #[ORM\Column(length: 50)]
+    private ?string $email = null;
 
     #[ORM\Column(length: 10)]
     private ?string $postalCode = null;
@@ -40,38 +38,16 @@ class Customer
     #[ORM\Column(length: 50)]
     private ?string $phone = null;
 
-    #[ORM\Column(length: 50, nullable: true)]
-    private ?string $TVANumber = null;
-
-    #[ORM\Column(length: 50, nullable: true)]
-    private ?string $SIRET = null;
-
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\OneToMany(mappedBy: 'customers', targetEntity: CustomerUser::class, orphanRemoval: true)]
-    private Collection $customerUsers;
-
-    public function __construct()
-    {
-        $this->customerUsers = new ArrayCollection();
-    }
+    #[ORM\ManyToOne(inversedBy: 'customerUsers')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Customer $customers = null;
 
     public function getId(): ?int
     {
         return $this->id;
-    }
-
-    public function getSociety(): ?string
-    {
-        return $this->society;
-    }
-
-    public function setSociety(string $society): self
-    {
-        $this->society = $society;
-
-        return $this;
     }
 
     public function getLastName(): ?string
@@ -94,6 +70,18 @@ class Customer
     public function setFirstName(string $firstName): self
     {
         $this->firstName = $firstName;
+
+        return $this;
+    }
+
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(string $email): self
+    {
+        $this->email = $email;
 
         return $this;
     }
@@ -158,30 +146,6 @@ class Customer
         return $this;
     }
 
-    public function getTVANumber(): ?string
-    {
-        return $this->TVANumber;
-    }
-
-    public function setTVANumber(?string $TVANumber): self
-    {
-        $this->TVANumber = $TVANumber;
-
-        return $this;
-    }
-
-    public function getSIRET(): ?string
-    {
-        return $this->SIRET;
-    }
-
-    public function setSIRET(?string $SIRET): self
-    {
-        $this->SIRET = $SIRET;
-
-        return $this;
-    }
-
     public function getCreatedAt(): ?\DateTimeInterface
     {
         return $this->createdAt;
@@ -194,32 +158,14 @@ class Customer
         return $this;
     }
 
-    /**
-     * @return Collection<int, CustomerUser>
-     */
-    public function getCustomerUsers(): Collection
+    public function getCustomers(): ?Customer
     {
-        return $this->customerUsers;
+        return $this->customers;
     }
 
-    public function addCustomerUser(CustomerUser $customerUser): self
+    public function setCustomers(?Customer $customers): self
     {
-        if (!$this->customerUsers->contains($customerUser)) {
-            $this->customerUsers->add($customerUser);
-            $customerUser->setCustomers($this);
-        }
-
-        return $this;
-    }
-
-    public function removeCustomerUser(CustomerUser $customerUser): self
-    {
-        if ($this->customerUsers->removeElement($customerUser)) {
-            // set the owning side to null (unless already changed)
-            if ($customerUser->getCustomers() === $this) {
-                $customerUser->setCustomers(null);
-            }
-        }
+        $this->customers = $customers;
 
         return $this;
     }
