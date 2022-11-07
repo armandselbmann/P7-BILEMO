@@ -2,6 +2,7 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\Customer;
 use App\Entity\Image;
 use App\Entity\Product;
 use Doctrine\Bundle\FixturesBundle\Fixture;
@@ -184,6 +185,25 @@ class AppFixtures extends Fixture
             }
 
             $manager->persist($product);
+        }
+
+        // Customer
+        for ($i=0; $i < 4; $i++) {
+            $customer = new Customer;
+            $customer->setSociety($faker->company);
+            $customer->setLastName($faker->lastName);
+            $customer->setFirstName($faker->firstName);
+            $customer->setPostalCode($faker->postcode);
+            $customer->setAdress($faker->streetAddress);
+            $customer->setCity($faker->city);
+            $customer->setCountry('France');
+            $customer->setPhone($faker->phoneNumber);
+            $customer->setTVANumber($faker->vat);
+            $customer->setSIRET($faker->siret);
+            $customer->setCreatedAt($faker->dateTimeBetween('-1 year', 'now' ));
+
+            $manager->persist($customer);
+
         }
 
         $manager->flush();
