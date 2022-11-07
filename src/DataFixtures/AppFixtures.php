@@ -4,6 +4,7 @@ namespace App\DataFixtures;
 
 use App\Entity\Customer;
 use App\Entity\CustomerUser;
+use App\Entity\Employee;
 use App\Entity\Image;
 use App\Entity\Product;
 use Doctrine\Bundle\FixturesBundle\Fixture;
@@ -141,7 +142,6 @@ class AppFixtures extends Fixture
                 $image->setProducts($product);
                 $manager->persist($image);
             }
-
             $manager->persist($product);
         }
 
@@ -184,7 +184,6 @@ class AppFixtures extends Fixture
                 $image->setProducts($product);
                 $manager->persist($image);
             }
-
             $manager->persist($product);
         }
 
@@ -218,12 +217,18 @@ class AppFixtures extends Fixture
 
                 $manager->persist($customerUser);
             }
-
             $manager->persist($customer);
-
         }
 
-        $manager->flush();
+        // Employee
+        $employee = new Employee();
+        $employee->setLastName($faker->lastName);
+        $employee->setFirstName($faker->firstName);
+        $employee->setPhone($faker->phoneNumber);
+        $employee->setCreatedAt($faker->dateTimeBetween('-1 year', 'now' ));
 
+        $manager->persist($employee);
+
+        $manager->flush();
     }
 }
