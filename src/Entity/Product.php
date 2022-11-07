@@ -62,7 +62,7 @@ class Product
     private ?string $brandCPU = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    private ?string $speedCPPU = null;
+    private ?string $speedCPU = null;
 
     #[ORM\Column(nullable: true)]
     private ?int $coresCPU = null;
@@ -296,14 +296,14 @@ class Product
         return $this;
     }
 
-    public function getSpeedCPPU(): ?string
+    public function getSpeedCPU(): ?string
     {
-        return $this->speedCPPU;
+        return $this->speedCPU;
     }
 
-    public function setSpeedCPPU(?string $speedCPPU): self
+    public function setSpeedCPU(?string $speedCPU): self
     {
-        $this->speedCPPU = $speedCPPU;
+        $this->speedCPU = $speedCPU;
 
         return $this;
     }
