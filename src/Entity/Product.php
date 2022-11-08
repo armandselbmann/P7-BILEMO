@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 class Product
@@ -14,96 +15,127 @@ class Product
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['getProductList', 'getProduct'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getProductList', 'getProduct'])]
     private ?string $reference = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Groups(['getProductList', 'getProduct'])]
     private ?\DateTimeInterface $releaseDate = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getProductList', 'getProduct'])]
     private ?string $series = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getProductList', 'getProduct'])]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['getProductList', 'getProduct'])]
     private ?string $description = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getProductList', 'getProduct'])]
     private ?string $maker = null;
 
     #[ORM\Column]
+    #[Groups(['getProductList', 'getProduct'])]
     private ?int $price = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getProduct'])]
     private ?string $color = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getProduct'])]
     private ?string $platform = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $network = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $connector = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $battery = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $RAM = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $ROM = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $brandCPU = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $speedCPU = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['getProduct'])]
     private ?int $coresCPU = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $mainCAM = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $subCam = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $displayType = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getProduct'])]
     private ?string $displaySize = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['getProduct'])]
     private ?bool $doubleSIM = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['getProduct'])]
     private ?bool $cardReader = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['getProduct'])]
     private ?bool $foldable = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['getProduct'])]
     private ?bool $eSIM = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['getProduct'])]
     private ?int $width = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['getProduct'])]
     private ?int $height = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['getProduct'])]
     private ?int $depth = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['getProduct'])]
     private ?int $weight = null;
 
     #[ORM\OneToMany(mappedBy: 'products', targetEntity: Image::class, orphanRemoval: true)]
+    #[Groups(['getProduct'])]
     private Collection $images;
 
     public function __construct()
