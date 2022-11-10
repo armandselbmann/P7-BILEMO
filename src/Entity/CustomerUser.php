@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\CustomerUserRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: CustomerUserRepository::class)]
 class CustomerUser
@@ -12,15 +13,18 @@ class CustomerUser
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['getCustomer'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getCustomer'])]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getCustomer'])]
     private ?string $email = null;
 
     #[ORM\Column(length: 10)]

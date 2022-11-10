@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: CustomerRepository::class)]
 class Customer
@@ -14,45 +15,59 @@ class Customer
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['getCustomerList', 'getCustomer'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getCustomerList', 'getCustomer'])]
     private ?string $society = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getCustomerList', 'getCustomer'])]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getCustomerList', 'getCustomer'])]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 10)]
+    #[Groups(['getCustomer'])]
     private ?string $postalCode = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getCustomer'])]
     private ?string $adress = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getCustomer'])]
     private ?string $city = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getCustomer'])]
     private ?string $country = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getCustomerList', 'getCustomer'])]
     private ?string $phone = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getCustomer'])]
     private ?string $TVANumber = null;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Groups(['getCustomer'])]
     private ?string $SIRET = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Groups(['getCustomer'])]
     private ?\DateTimeInterface $createdAt = null;
 
     #[ORM\OneToMany(mappedBy: 'customers', targetEntity: CustomerUser::class, orphanRemoval: true)]
+    #[Groups(['getCustomer'])]
     private Collection $customerUsers;
 
     #[ORM\OneToOne(mappedBy: 'customers', cascade: ['persist', 'remove'])]
+    #[Groups(['getCustomer'])]
     private ?User $user = null;
 
     public function __construct()
