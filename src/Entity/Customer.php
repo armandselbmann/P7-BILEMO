@@ -15,11 +15,11 @@ class Customer
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['getCustomerList', 'getCustomer'])]
+    #[Groups(['getCustomerList', 'getCustomer', 'getCustomerUserList', 'getCustomerUser'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerList', 'getCustomer'])]
+    #[Groups(['getCustomerList', 'getCustomer', 'getCustomerUserList', 'getCustomerUser'])]
     private ?string $society = null;
 
     #[ORM\Column(length: 255)]

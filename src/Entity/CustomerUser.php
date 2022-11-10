@@ -13,40 +13,48 @@ class CustomerUser
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer'])]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getCustomerUser'])]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer'])]
     private ?string $email = null;
 
     #[ORM\Column(length: 10)]
+    #[Groups(['getCustomerUser'])]
     private ?string $postalCode = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getCustomerUser'])]
     private ?string $adress = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getCustomerUser'])]
     private ?string $city = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getCustomerUser'])]
     private ?string $country = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getCustomerUser'])]
     private ?string $phone = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Groups(['getCustomerUser'])]
     private ?\DateTimeInterface $createdAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'customerUsers')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['getCustomerUserList', 'getCustomerUser'])]
     private ?Customer $customers = null;
 
     public function getId(): ?int
