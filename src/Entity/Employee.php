@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\EmployeeRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: EmployeeRepository::class)]
 class Employee
@@ -12,21 +13,27 @@ class Employee
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['getEmployeeList', 'getEmployee'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getEmployeeList', 'getEmployee'])]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['getEmployeeList', 'getEmployee'])]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['getEmployee'])]
     private ?string $phone = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Groups(['getEmployee'])]
     private ?\DateTimeInterface $createdAt = null;
 
     #[ORM\OneToOne(mappedBy: 'employees', cascade: ['persist', 'remove'])]
+    #[Groups(['getEmployee'])]
     private ?User $user = null;
 
     public function getId(): ?int
