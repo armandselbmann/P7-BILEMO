@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 
 class ProductController extends AbstractController
@@ -80,6 +81,37 @@ class ProductController extends AbstractController
         $location = $urlGenerator->generate('detailProduct', ['id' => $product->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonProduct, Response::HTTP_CREATED, ["Location" => $location], true);
+    }
+
+    /**
+     * Update a Product
+     *
+     * This method does not allow to modify the images linked to a product.
+     *
+     * @param Request $request
+     * @param SerializerInterface $serializer
+     * @param EntityManagerInterface $entityManager
+     * @param UrlGeneratorInterface $urlGenerator
+     * @return JsonResponse
+     */
+    #[Route('/api/products/{id}', name: 'updateProduct', methods: ['PUT'])]
+    public function updateProduct(
+        Request $request,
+        SerializerInterface $serializer,
+        EntityManagerInterface $entityManager,
+        Product $currentProduct
+    ): JsonResponse
+    {
+
+        $updatedProduct = $serializer->deserialize($request->getContent(),
+            Product::class,
+            'json',
+            [AbstractNormalizer::OBJECT_TO_POPULATE => $currentProduct]);
+
+        $entityManager->persist($updatedProduct);
+        $entityManager->flush();
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     /**
