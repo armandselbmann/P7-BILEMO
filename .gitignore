@@ -8,3 +8,9 @@
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
+
+###> PHPStorm ###
+.idea/
+.DS_Store
+public/.DS_Store
+###< PHPStorm ###
