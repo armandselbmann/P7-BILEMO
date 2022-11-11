@@ -17,23 +17,61 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 
+/**
+ * Customer Controller methods
+ */
 class CustomerController extends AbstractController
 {
+    /**
+     * @var SerializerInterface
+     */
+    private SerializerInterface $serializer;
+    /**
+     * @var EntityManagerInterface
+     */
+    private EntityManagerInterface $entityManager;
+    /**
+     * @var UrlGeneratorInterface
+     */
+    private UrlGeneratorInterface $urlGenerator;
+    /**
+     * @var UserPasswordHasherInterface
+     */
+    private UserPasswordHasherInterface $userPasswordHasher;
+
+    /**
+     * @param SerializerInterface $serializer
+     * @param EntityManagerInterface $entityManager
+     * @param UrlGeneratorInterface $urlGenerator
+     * @param UserPasswordHasherInterface $userPasswordHasher
+     */
+    public function __construct(
+        SerializerInterface $serializer,
+        EntityManagerInterface $entityManager,
+        UrlGeneratorInterface $urlGenerator,
+        UserPasswordHasherInterface $userPasswordHasher
+    )
+    {
+        $this->serializer = $serializer;
+        $this->entityManager = $entityManager;
+        $this->urlGenerator = $urlGenerator;
+        $this->userPasswordHasher = $userPasswordHasher;
+    }
+
     /**
      * Get Customer list
      *
      * @param CustomerRepository $customerRepository
-     * @param SerializerInterface $serializer
      * @return JsonResponse
      */
     #[Route('/api/customers', name: 'listCustomer', methods: ['GET'])]
-    public function listCustomer(CustomerRepository $customerRepository, SerializerInterface $serializer): JsonResponse
+    public function listCustomer(CustomerRepository $customerRepository): JsonResponse
     {
         $customerList = $customerRepository->findAll();
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomerList')
             ->toArray();
-        $jsonCustomerList = $serializer->serialize($customerList, 'json', $context);
+        $jsonCustomerList = $this->serializer->serialize($customerList, 'json', $context);
         return new JsonResponse($jsonCustomerList, Response::HTTP_OK, [], true);
     }
 
@@ -41,16 +79,15 @@ class CustomerController extends AbstractController
      * Get Customer detail
      *
      * @param Customer $customer
-     * @param SerializerInterface $serializer
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'detailCustomer', methods: ['GET'])]
-    public function detailCustomer(Customer $customer, SerializerInterface $serializer): JsonResponse
+    public function detailCustomer(Customer $customer): JsonResponse
     {
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomer')
             ->toArray();
-        $jsonCustomer = $serializer->serialize($customer, 'json', $context);
+        $jsonCustomer = $this->serializer->serialize($customer, 'json', $context);
         return new JsonResponse($jsonCustomer, Response::HTTP_OK, [], true);
     }
 
@@ -58,38 +95,28 @@ class CustomerController extends AbstractController
      * Create a Customer
      *
      * @param Request $request
-     * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $entityManager
-     * @param UrlGeneratorInterface $urlGenerator
-     * @param UserPasswordHasherInterface $userPasswordHasher
      * @return JsonResponse
      */
     #[Route('/api/customers', name: 'createCustomer', methods: ['POST'])]
-    public function createCustomer(
-        Request $request,
-        SerializerInterface $serializer,
-        EntityManagerInterface $entityManager,
-        UrlGeneratorInterface $urlGenerator,
-        UserPasswordHasherInterface $userPasswordHasher
-    ): JsonResponse
+    public function createCustomer(Request $request): JsonResponse
     {
-        $customer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
+        $customer = $this->serializer->deserialize($request->getContent(), Customer::class, 'json');
         $customer->setCreatedAt(new \DateTime());
 
         $user = $customer->getUser();
-        $passwordHashed = $userPasswordHasher->hashPassword($user, $user->getPassword());
+        $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
         $user->setPassword($passwordHashed);
         $user->setRoles(['ROLE_USER']);
 
-        $entityManager->persist($user);
-        $entityManager->persist($customer);
-        $entityManager->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($customer);
+        $this->entityManager->flush();
 
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomer')
             ->toArray();
-        $jsonCustomer = $serializer->serialize($customer, 'json', $context);
-        $location = $urlGenerator->generate('detailCustomer', ['id' => $customer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $jsonCustomer = $this->serializer->serialize($customer, 'json', $context);
+        $location = $this->urlGenerator->generate('detailCustomer', ['id' => $customer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonCustomer, Response::HTTP_CREATED, ["Location" => $location], true);
     }
@@ -99,26 +126,15 @@ class CustomerController extends AbstractController
      *
      * @param Request $request
      * @param Customer $currentCustomer
-     * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $entityManager
-     * @param UserPasswordHasherInterface $userPasswordHasher
-     * @param UrlGeneratorInterface $urlGenerator
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'updateCustomer', methods: ['PUT'])]
-    public function updateCustomer(
-        Request $request,
-        Customer $currentCustomer,
-        SerializerInterface $serializer,
-        EntityManagerInterface $entityManager,
-        UserPasswordHasherInterface $userPasswordHasher,
-        UrlGeneratorInterface $urlGenerator
-    ): JsonResponse
+    public function updateCustomer(Request $request, Customer $currentCustomer): JsonResponse
     {
         $currentUser = $currentCustomer->getUser();
         $currentPassword = $currentUser->getPassword();
 
-        $updatedCustomer = $serializer->deserialize($request->getContent(),
+        $updatedCustomer = $this->serializer->deserialize($request->getContent(),
             Customer::class,
             'json',
             [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentCustomer, AbstractObjectNormalizer::DEEP_OBJECT_TO_POPULATE => true]);
@@ -127,18 +143,18 @@ class CustomerController extends AbstractController
         $updatedPassword = $updatedUser->getPassword();
 
         if($currentPassword != $updatedPassword) {
-            $updatedPasswordHashed = $userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
+            $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
             $updatedUser->setPassword($updatedPasswordHashed);
         }
 
-        $entityManager->persist($updatedCustomer);
-        $entityManager->flush();
+        $this->entityManager->persist($updatedCustomer);
+        $this->entityManager->flush();
 
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomer')
             ->toArray();
-        $jsonCustomer = $serializer->serialize($updatedCustomer, 'json', $context);
-        $location = $urlGenerator->generate('detailCustomer', ['id' => $updatedCustomer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $jsonCustomer = $this->serializer->serialize($updatedCustomer, 'json', $context);
+        $location = $this->urlGenerator->generate('detailCustomer', ['id' => $updatedCustomer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonCustomer, Response::HTTP_OK, ["Location" => $location], true);
     }
@@ -147,14 +163,13 @@ class CustomerController extends AbstractController
      * Delete a Customer
      *
      * @param Customer $customer
-     * @param EntityManagerInterface $entityManager
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'deleteCustomer', methods: ['DELETE'])]
-    public function deleteCustomer(Customer $customer, EntityManagerInterface $entityManager): JsonResponse
+    public function deleteCustomer(Customer $customer): JsonResponse
     {
-        $entityManager->remove($customer);
-        $entityManager->flush();
+        $this->entityManager->remove($customer);
+        $this->entityManager->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

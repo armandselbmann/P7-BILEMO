@@ -15,23 +15,55 @@ use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuild
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 
+
+/**
+ * Product Controller methods
+ */
 class ProductController extends AbstractController
 {
+    /**
+     * @var SerializerInterface
+     */
+    private SerializerInterface $serializer;
+    /**
+     * @var EntityManagerInterface
+     */
+    private EntityManagerInterface $entityManager;
+    /**
+     * @var UrlGeneratorInterface
+     */
+    private UrlGeneratorInterface $urlGenerator;
+
+    /**
+     * @param SerializerInterface $serializer
+     * @param EntityManagerInterface $entityManager
+     * @param UrlGeneratorInterface $urlGenerator
+     */
+    public function __construct(
+        SerializerInterface $serializer,
+        EntityManagerInterface $entityManager,
+        UrlGeneratorInterface $urlGenerator
+    )
+    {
+        $this->serializer = $serializer;
+        $this->entityManager = $entityManager;
+        $this->urlGenerator = $urlGenerator;
+    }
+
     /**
      * Get Product list
      *
      * @param ProductRepository $productRepository
-     * @param SerializerInterface $serializer
      * @return JsonResponse
      */
     #[Route('/api/products', name: 'listProduct', methods: ['GET'])]
-    public function listProduct(ProductRepository $productRepository, SerializerInterface $serializer): JsonResponse
+    public function listProduct(ProductRepository $productRepository): JsonResponse
     {
         $productList = $productRepository->findAll();
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getProductList')
             ->toArray();
-        $jsonProductList = $serializer->serialize($productList, 'json', $context);
+        $jsonProductList = $this->serializer->serialize($productList, 'json', $context);
         return new JsonResponse($jsonProductList, Response::HTTP_OK, [], true);
     }
 
@@ -39,16 +71,15 @@ class ProductController extends AbstractController
      * Get Product detail
      *
      * @param Product $product
-     * @param SerializerInterface $serializer
      * @return JsonResponse
      */
     #[Route('/api/products/{id}', name: 'detailProduct', methods: ['GET'])]
-    public function detailProduct(Product $product, SerializerInterface $serializer): JsonResponse
+    public function detailProduct(Product $product): JsonResponse
     {
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getProduct')
             ->toArray();
-        $jsonProduct = $serializer->serialize($product, 'json', $context);
+        $jsonProduct = $this->serializer->serialize($product, 'json', $context);
         return new JsonResponse($jsonProduct, Response::HTTP_OK, [], true);
     }
 
@@ -56,29 +87,21 @@ class ProductController extends AbstractController
      * Create a Product
      *
      * @param Request $request
-     * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $entityManager
-     * @param UrlGeneratorInterface $urlGenerator
      * @return JsonResponse
      */
     #[Route('/api/products', name: 'createProduct', methods: ['POST'])]
-    public function createProduct(
-        Request $request,
-        SerializerInterface $serializer,
-        EntityManagerInterface $entityManager,
-        UrlGeneratorInterface $urlGenerator,
-    ): JsonResponse
+    public function createProduct(Request $request): JsonResponse
     {
-        $product = $serializer->deserialize($request->getContent(), Product::class, 'json');
+        $product = $this->serializer->deserialize($request->getContent(), Product::class, 'json');
         $product->setReleaseDate(new \DateTime());
 
-        $entityManager->persist($product);
-        $entityManager->flush();
+        $this->entityManager->persist($product);
+        $this->entityManager->flush();
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getProduct')
             ->toArray();
-        $jsonProduct = $serializer->serialize($product, 'json', $context);
-        $location = $urlGenerator->generate('detailProduct', ['id' => $product->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $jsonProduct = $this->serializer->serialize($product, 'json', $context);
+        $location = $this->urlGenerator->generate('detailProduct', ['id' => $product->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonProduct, Response::HTTP_CREATED, ["Location" => $location], true);
     }
@@ -89,34 +112,25 @@ class ProductController extends AbstractController
      * This method does not allow to modify the images linked to a product.
      *
      * @param Request $request
-     * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $entityManager
      * @param Product $currentProduct
-     * @param UrlGeneratorInterface $urlGenerator
      * @return JsonResponse
      */
     #[Route('/api/products/{id}', name: 'updateProduct', methods: ['PUT'])]
-    public function updateProduct(
-        Request $request,
-        SerializerInterface $serializer,
-        EntityManagerInterface $entityManager,
-        Product $currentProduct,
-        UrlGeneratorInterface $urlGenerator
-    ): JsonResponse
+    public function updateProduct(Request $request, Product $currentProduct): JsonResponse
     {
-        $updatedProduct = $serializer->deserialize($request->getContent(),
+        $updatedProduct = $this->serializer->deserialize($request->getContent(),
             Product::class,
             'json',
             [AbstractNormalizer::OBJECT_TO_POPULATE => $currentProduct]);
 
-        $entityManager->persist($updatedProduct);
-        $entityManager->flush();
+        $this->entityManager->persist($updatedProduct);
+        $this->entityManager->flush();
 
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getProduct')
             ->toArray();
-        $jsonProduct = $serializer->serialize($updatedProduct, 'json', $context);
-        $location = $urlGenerator->generate('detailProduct', ['id' => $updatedProduct->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $jsonProduct = $this->serializer->serialize($updatedProduct, 'json', $context);
+        $location = $this->urlGenerator->generate('detailProduct', ['id' => $updatedProduct->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonProduct, Response::HTTP_OK, ["Location" => $location], true);
     }
@@ -125,14 +139,13 @@ class ProductController extends AbstractController
      * Delete a Product
      *
      * @param Product $product
-     * @param EntityManagerInterface $entityManager
      * @return JsonResponse
      */
     #[Route('/api/products/{id}', name: 'deleteProduct', methods: ['DELETE'])]
-    public function deleteProduct(Product $product, EntityManagerInterface $entityManager): JsonResponse
+    public function deleteProduct(Product $product): JsonResponse
     {
-        $entityManager->remove($product);
-        $entityManager->flush();
+        $this->entityManager->remove($product);
+        $this->entityManager->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
