@@ -102,6 +102,7 @@ class CustomerController extends AbstractController
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
      * @param UserPasswordHasherInterface $userPasswordHasher
+     * @param UrlGeneratorInterface $urlGenerator
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'updateCustomer', methods: ['PUT'])]
@@ -111,6 +112,7 @@ class CustomerController extends AbstractController
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UserPasswordHasherInterface $userPasswordHasher,
+        UrlGeneratorInterface $urlGenerator
     ): JsonResponse
     {
         $currentUser = $currentCustomer->getUser();
@@ -132,7 +134,13 @@ class CustomerController extends AbstractController
         $entityManager->persist($updatedCustomer);
         $entityManager->flush();
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        $context = (new ObjectNormalizerContextBuilder())
+            ->withGroups('getCustomer')
+            ->toArray();
+        $jsonCustomer = $serializer->serialize($updatedCustomer, 'json', $context);
+        $location = $urlGenerator->generate('detailCustomer', ['id' => $updatedCustomer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new JsonResponse($jsonCustomer, Response::HTTP_OK, ["Location" => $location], true);
     }
 
     /**

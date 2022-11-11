@@ -91,6 +91,7 @@ class ProductController extends AbstractController
      * @param Request $request
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
+     * @param Product $currentProduct
      * @param UrlGeneratorInterface $urlGenerator
      * @return JsonResponse
      */
@@ -99,10 +100,10 @@ class ProductController extends AbstractController
         Request $request,
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
-        Product $currentProduct
+        Product $currentProduct,
+        UrlGeneratorInterface $urlGenerator
     ): JsonResponse
     {
-
         $updatedProduct = $serializer->deserialize($request->getContent(),
             Product::class,
             'json',
@@ -111,7 +112,13 @@ class ProductController extends AbstractController
         $entityManager->persist($updatedProduct);
         $entityManager->flush();
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        $context = (new ObjectNormalizerContextBuilder())
+            ->withGroups('getProduct')
+            ->toArray();
+        $jsonProduct = $serializer->serialize($updatedProduct, 'json', $context);
+        $location = $urlGenerator->generate('detailProduct', ['id' => $updatedProduct->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new JsonResponse($jsonProduct, Response::HTTP_OK, ["Location" => $location], true);
     }
 
     /**

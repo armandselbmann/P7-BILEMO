@@ -102,6 +102,7 @@ class EmployeeController extends AbstractController
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
      * @param UserPasswordHasherInterface $userPasswordHasher
+     * @param UrlGeneratorInterface $urlGenerator
      * @return JsonResponse
      */
     #[Route('/api/employees/{id}', name: 'updateEmployee', methods: ['PUT'])]
@@ -111,6 +112,7 @@ class EmployeeController extends AbstractController
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UserPasswordHasherInterface $userPasswordHasher,
+        UrlGeneratorInterface $urlGenerator
     ): JsonResponse
     {
         $currentUser = $currentEmployee->getUser();
@@ -132,7 +134,13 @@ class EmployeeController extends AbstractController
         $entityManager->persist($updatedEmployee);
         $entityManager->flush();
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        $context = (new ObjectNormalizerContextBuilder())
+            ->withGroups('getEmployee')
+            ->toArray();
+        $jsonEmployee = $serializer->serialize($updatedEmployee, 'json', $context);
+        $location = $urlGenerator->generate('detailEmployee', ['id' => $updatedEmployee->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new JsonResponse($jsonEmployee, Response::HTTP_OK, ["Location" => $location], true);
     }
 
     /**
