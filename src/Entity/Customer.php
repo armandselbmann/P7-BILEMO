@@ -20,7 +20,7 @@ class Customer
 
     #[ORM\Column(length: 255)]
     #[Groups(['getCustomerList', 'getCustomer', 'getCustomerUserList', 'getCustomerUser'])]
-    private ?string $society = null;
+    private ?string $company = null;
 
     #[ORM\Column(length: 255)]
     #[Groups(['getCustomerList', 'getCustomer'])]
@@ -80,14 +80,14 @@ class Customer
         return $this->id;
     }
 
-    public function getSociety(): ?string
+    public function getCompany(): ?string
     {
-        return $this->society;
+        return $this->company;
     }
 
-    public function setSociety(string $society): self
+    public function setCompany(string $company): self
     {
-        $this->society = $society;
+        $this->company = $company;
 
         return $this;
     }
