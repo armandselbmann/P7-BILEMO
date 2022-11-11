@@ -100,6 +100,7 @@ class CustomerUserController extends AbstractController
      * @param CustomerUser $currentCustomerUser
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
+     * @param UrlGeneratorInterface $urlGenerator
      * @return JsonResponse
      */
     #[Route('/api/customer-users/{id}', name: 'updateCustomerUser', methods: ['PUT'])]
@@ -108,6 +109,7 @@ class CustomerUserController extends AbstractController
         CustomerUser $currentCustomerUser,
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
+        UrlGeneratorInterface $urlGenerator
     ): JsonResponse
     {
         $updatedCustomerUser = $serializer->deserialize($request->getContent(),
@@ -118,7 +120,13 @@ class CustomerUserController extends AbstractController
         $entityManager->persist($updatedCustomerUser);
         $entityManager->flush();
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        $context = (new ObjectNormalizerContextBuilder())
+            ->withGroups('getCustomerUser')
+            ->toArray();
+        $jsonCustomerUser = $serializer->serialize($updatedCustomerUser, 'json', $context);
+        $location = $urlGenerator->generate('detailCustomerUser', ['id' => $updatedCustomerUser->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new JsonResponse($jsonCustomerUser, Response::HTTP_CREATED, ["Location" => $location], true);
     }
 
     /**
