@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Employee;
 use App\Repository\EmployeeRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -65,6 +66,7 @@ class EmployeeController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/employees', name: 'listEmployee', methods: ['GET'])]
+    //#[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des employé(e)s.')]
     public function listEmployee(EmployeeRepository $employeeRepository): JsonResponse
     {
         $employeeList = $employeeRepository->findAll();
@@ -82,6 +84,7 @@ class EmployeeController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/employees/{id}', name: 'detailEmployee', methods: ['GET'])]
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser un(e) employé(e).')]
     public function detailEmployee(Employee $employee): JsonResponse
     {
         $context = (new ObjectNormalizerContextBuilder())
@@ -98,6 +101,7 @@ class EmployeeController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/employees', name: 'createEmployee', methods: ['POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un(e) employé(e).')]
     public function createEmployee(Request $request): JsonResponse
     {
         $employee = $this->serializer->deserialize($request->getContent(), Employee::class, 'json');
@@ -129,6 +133,7 @@ class EmployeeController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/employees/{id}', name: 'updateEmployee', methods: ['PUT'])]
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un(e) employé(e).')]
     public function updateEmployee(Request $request, Employee $currentEmployee): JsonResponse
     {
         $currentUser = $currentEmployee->getUser();
@@ -166,6 +171,7 @@ class EmployeeController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/employees/{id}', name: 'deleteEmployee', methods: ['DELETE'])]
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un(e) employé(e).')]
     public function deleteEmployee(Employee $employee): JsonResponse
     {
         $this->entityManager->remove($employee);

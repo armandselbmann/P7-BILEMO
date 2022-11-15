@@ -195,10 +195,10 @@ class AppFixtures extends Fixture
             $manager->persist($product);
         }
 
-        // Customer & CustomerUser
+        // Customers & CustomerUsers
         for ($i=0; $i < 4; $i++) {
             $customer = new Customer;
-            $customer->setSociety($faker->company);
+            $customer->setCompany($faker->company);
             $customer->setLastName($faker->lastName);
             $customer->setFirstName($faker->firstName);
             $customer->setPostalCode($faker->postcode);
@@ -228,15 +228,15 @@ class AppFixtures extends Fixture
             $manager->persist($customer);
 
             $user = new User();
-            $user->setEmail('customer'.($i+1).'@bilemoapi.com');
+            $user->setEmail('customer'.($i+1).'@gmail.com');
             $user->setPassword($this->userPasswordHasher->hashPassword($user, 'password'.($i+1)));
-            $user->setRoles(["ROLE_USER"]);
+            $user->setRoles(["ROLE_CLIENT"]);
             $user->setCustomers($customer);
 
             $manager->persist($user);
         }
 
-        // Employee
+        // Employees with admin role
         $employee = new Employee();
         $employee->setLastName($faker->lastName);
         $employee->setFirstName($faker->firstName);
@@ -246,9 +246,26 @@ class AppFixtures extends Fixture
         $manager->persist($employee);
 
         $user = new User();
-        $user->setEmail('employee@bilemoapi.com');
+        $user->setEmail('employee@bilemo.com');
         $user->setPassword($this->userPasswordHasher->hashPassword($user, 'password'));
         $user->setRoles(["ROLE_ADMIN"]);
+        $user->setEmployees($employee);
+
+        $manager->persist($user);
+
+        // Employee with super admin role
+        $employee = new Employee();
+        $employee->setLastName($faker->lastName);
+        $employee->setFirstName($faker->firstName);
+        $employee->setPhone($faker->phoneNumber);
+        $employee->setCreatedAt($faker->dateTimeBetween('-1 year', 'now' ));
+
+        $manager->persist($employee);
+
+        $user = new User();
+        $user->setEmail('bilemo@bilemo.com');
+        $user->setPassword($this->userPasswordHasher->hashPassword($user, 'bilemo'));
+        $user->setRoles(["ROLE_SUPER_ADMIN"]);
         $user->setEmployees($employee);
 
         $manager->persist($user);

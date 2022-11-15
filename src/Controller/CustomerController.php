@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Customer;
 use App\Repository\CustomerRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -65,6 +66,7 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers', name: 'listCustomer', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des clients.')]
     public function listCustomer(CustomerRepository $customerRepository): JsonResponse
     {
         $customerList = $customerRepository->findAll();
@@ -82,6 +84,7 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'detailCustomer', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser un client.')]
     public function detailCustomer(Customer $customer): JsonResponse
     {
         $context = (new ObjectNormalizerContextBuilder())
@@ -98,6 +101,7 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers', name: 'createCustomer', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un client.')]
     public function createCustomer(Request $request): JsonResponse
     {
         $customer = $this->serializer->deserialize($request->getContent(), Customer::class, 'json');
@@ -129,6 +133,7 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'updateCustomer', methods: ['PUT'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un client.')]
     public function updateCustomer(Request $request, Customer $currentCustomer): JsonResponse
     {
         $currentUser = $currentCustomer->getUser();
@@ -166,6 +171,7 @@ class CustomerController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'deleteCustomer', methods: ['DELETE'])]
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un client.')]
     public function deleteCustomer(Customer $customer): JsonResponse
     {
         $this->entityManager->remove($customer);
