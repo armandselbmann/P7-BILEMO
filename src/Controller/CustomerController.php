@@ -3,9 +3,11 @@
 namespace App\Controller;
 
 use App\Entity\Customer;
-use App\Repository\CustomerRepository;
+use App\Services\PaginationService;
 use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -70,14 +72,17 @@ class CustomerController extends AbstractController
     /**
      * Get Customer list
      *
-     * @param CustomerRepository $customerRepository
+     * @param PaginationService $paginationService
+     * @param Request $request
      * @return JsonResponse
+     * @throws NoResultException
+     * @throws NonUniqueResultException
      */
     #[Route('/api/customers', name: 'listCustomer', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des clients.')]
-    public function listCustomer(CustomerRepository $customerRepository): JsonResponse
+    public function listCustomer(PaginationService $paginationService, Request $request): JsonResponse
     {
-        $customerList = $customerRepository->findAll();
+        $customerList = $paginationService->paginationList($request, 'customer');
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomerList')
             ->toArray();
