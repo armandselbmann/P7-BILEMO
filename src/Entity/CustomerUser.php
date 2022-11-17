@@ -6,6 +6,7 @@ use App\Repository\CustomerUserRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: CustomerUserRepository::class)]
 class CustomerUser
@@ -18,34 +19,66 @@ class CustomerUser
 
     #[ORM\Column(length: 255)]
     #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un nom.")]
+    #[Assert\Length(
+        min: 3,
+        max: 50,
+        minMessage: "Le nom doit faire au moins {{ limit }} caractères.",
+        maxMessage: "Le nom ne peut pas contenir plus de {{ limit }} caractères.")]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
     #[Groups(['getCustomerUser'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un prénom.")]
+    #[Assert\Length(
+        min: 3,
+        max: 50,
+        minMessage: "Le prénom doit faire au moins {{ limit }} caractères.",
+        maxMessage: "Le prénom ne peut pas contenir plus de {{ limit }} caractères.")]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 50)]
     #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer'])]
+    #[Assert\Email(message: 'Cet email {{ value }} n\'est pas valide')]
     private ?string $email = null;
 
     #[ORM\Column(length: 10)]
     #[Groups(['getCustomerUser'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un code postal.")]
+    #[Assert\Length(
+        min: 5,
+        minMessage: "Le code postal doit faire au moins {{ limit }} caractères.")]
     private ?string $postalCode = null;
 
     #[ORM\Column(length: 255)]
     #[Groups(['getCustomerUser'])]
+    #[Assert\NotBlank(message: "Vous devez saisir une adresse.")]
     private ?string $adress = null;
 
     #[ORM\Column(length: 50)]
     #[Groups(['getCustomerUser'])]
+    #[Assert\NotBlank(message: "Vous devez saisir une ville.")]
+    #[Assert\Length(
+        min: 3,
+        minMessage: "La ville doit faire au moins {{ limit }} caractères.")]
     private ?string $city = null;
 
     #[ORM\Column(length: 50)]
     #[Groups(['getCustomerUser'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un pays.")]
+    #[Assert\Length(
+        min: 3,
+        minMessage: "Le pays doit faire au moins {{ limit }} caractères.")]
     private ?string $country = null;
 
     #[ORM\Column(length: 50)]
     #[Groups(['getCustomerUser'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un numéro de téléphone.")]
+    #[Assert\Length(
+        min: 4,
+        max: 50,
+        minMessage: "Le numéro de téléphone doit faire au moins {{ limit }} caractères.",
+        maxMessage: "Le numéro de téléphone ne peut pas contenir plus de {{ limit }} caractères.")]
     private ?string $phone = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]

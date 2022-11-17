@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\CustomerUser;
 use App\Repository\CustomerRepository;
 use App\Repository\CustomerUserRepository;
+use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -40,24 +41,38 @@ class CustomerUserController extends AbstractController
      * @var Security
      */
     private Security $security;
+    /**
+     * @var ValidatorService
+     */
+    private ValidatorService $validatorService;
+    /**
+     * @var CustomerRepository
+     */
+    private CustomerRepository $customerRepository;
 
     /**
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
      * @param UrlGeneratorInterface $urlGenerator
      * @param Security $security
+     * @param ValidatorService $validatorService
+     * @param CustomerRepository $customerRepository
      */
     public function __construct(
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
-        Security $security
+        Security $security,
+        ValidatorService $validatorService,
+        CustomerRepository $customerRepository
     )
     {
         $this->serializer = $serializer;
         $this->entityManager = $entityManager;
         $this->urlGenerator = $urlGenerator;
         $this->security = $security;
+        $this->validatorService = $validatorService;
+        $this->customerRepository = $customerRepository;
     }
 
     /**
@@ -89,12 +104,11 @@ class CustomerUserController extends AbstractController
      * Get CustomerUser detail
      *
      * @param CustomerUser $customerUser
-     * @param CustomerUserRepository $customerUserRepository
      * @return JsonResponse
      */
     #[Route('/api/customer-users/{id}', name: 'detailCustomerUser', methods: ['GET'])]
     #[IsGranted('ROLE_CLIENT', message: 'Vous n\'avez pas les droits suffisants pour visualiser cet d\'utilisateur.')]
-    public function detailCustomerUser(CustomerUser $customerUser, CustomerUserRepository $customerUserRepository): JsonResponse
+    public function detailCustomerUser(CustomerUser $customerUser): JsonResponse
     {
         $customerRoles = $this->security->getUser()->getRoles();
         if(in_array('ROLE_CLIENT', $customerRoles)) {
@@ -117,12 +131,11 @@ class CustomerUserController extends AbstractController
      * We pass the id Customer linked to this CustomerUser in the body request.
      *
      * @param Request $request
-     * @param CustomerRepository $customerRepository
      * @return JsonResponse
      */
     #[Route('/api/customer-users', name: 'createCustomerUser', methods: ['POST'])]
     #[IsGranted('ROLE_CLIENT', message: 'Vous n\'avez pas les droits suffisants pour créer un utilisateur.')]
-    public function createCustomerUser(Request $request, CustomerRepository $customerRepository): JsonResponse
+    public function createCustomerUser(Request $request): JsonResponse
     {
         $customerUser = $this->serializer->deserialize($request->getContent(), CustomerUser::class, 'json');
         $content = $request->toArray();
@@ -136,13 +149,18 @@ class CustomerUserController extends AbstractController
                 throw new HttpException(400,'Veuillez saisir un numéro de Client.');
         }
 
-        if (!$customerRepository->findOneById($customerId)) {
+        if (!$this->customerRepository->findOneById($customerId)) {
             throw new HttpException(404, 'Ce client n\'existe pas.');
         }
 
-        $customerUser->setCustomers($customerRepository->find($customerId));
+        $customerUser->setCustomers($this->customerRepository->findOneById($customerId));
         $customerUser->setCreatedAt(new \DateTime());
 
+        if($this->validatorService->checkValidation($customerUser)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($customerUser), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
         $this->entityManager->persist($customerUser);
         $this->entityManager->flush();
 
@@ -166,6 +184,12 @@ class CustomerUserController extends AbstractController
     #[IsGranted('ROLE_CLIENT', message: 'Vous n\'avez pas les droits suffisants pour modifier un utilisateur.')]
     public function updateCustomerUser(Request $request, CustomerUser $currentCustomerUser): JsonResponse
     {
+        $updatedCustomerUser = $this->serializer->deserialize($request->getContent(),
+            CustomerUser::class,
+            'json',
+            [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentCustomerUser]);
+        $content = $request->toArray();
+
         $customerRoles = $this->security->getUser()->getRoles();
         if(in_array('ROLE_CLIENT', $customerRoles)) {
             $customerId = $this->security->getUser()->getCustomers()->getId();
@@ -173,12 +197,23 @@ class CustomerUserController extends AbstractController
             if($customerId != $customerUserId) {
                 throw new HttpException(403,'Vous ne pouvez pas modifier cet utilisateur.');
             }
+        } else {
+            if (!empty($content['idCustomer'])) {
+                $customerId = $content['idCustomer'];
+                $updatedCustomerUser->setCustomers($this->customerRepository->findOneById($customerId));
+            } else {
+                throw new HttpException(400, 'Veuillez saisir un numéro de Client.');
+            }
+            if (!$this->customerRepository->findOneById($customerId)) {
+                throw new HttpException(404, 'Ce client n\'existe pas.');
+            }
         }
 
-        $updatedCustomerUser = $this->serializer->deserialize($request->getContent(),
-            CustomerUser::class,
-            'json',
-            [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentCustomerUser]);
+        if($this->validatorService->checkValidation($updatedCustomerUser)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedCustomerUser), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
 
         $this->entityManager->persist($updatedCustomerUser);
         $this->entityManager->flush();

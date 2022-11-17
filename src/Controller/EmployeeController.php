@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Employee;
 use App\Repository\EmployeeRepository;
+use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -39,6 +40,10 @@ class EmployeeController extends AbstractController
      * @var UserPasswordHasherInterface
      */
     private UserPasswordHasherInterface $userPasswordHasher;
+    /**
+     * @var ValidatorService
+     */
+    private ValidatorService $validatorService;
 
     /**
      * @param SerializerInterface $serializer
@@ -50,13 +55,15 @@ class EmployeeController extends AbstractController
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
-        UserPasswordHasherInterface $userPasswordHasher
+        UserPasswordHasherInterface $userPasswordHasher,
+        ValidatorService $validatorService
     )
     {
         $this->serializer = $serializer;
         $this->entityManager = $entityManager;
         $this->urlGenerator = $urlGenerator;
         $this->userPasswordHasher = $userPasswordHasher;
+        $this->validatorService = $validatorService;
     }
 
     /**
@@ -106,8 +113,18 @@ class EmployeeController extends AbstractController
     {
         $employee = $this->serializer->deserialize($request->getContent(), Employee::class, 'json');
         $employee->setCreatedAt(new \DateTime());
+        if($this->validatorService->checkValidation($employee)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($employee), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
 
         $user = $employee->getUser();
+        if($this->validatorService->checkValidation($user)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($user), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
         $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
         $user->setPassword($passwordHashed);
         $user->setRoles(['ROLE_ADMIN']);
@@ -144,8 +161,20 @@ class EmployeeController extends AbstractController
             'json',
             [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentEmployee, AbstractObjectNormalizer::DEEP_OBJECT_TO_POPULATE => true]);
 
+        if($this->validatorService->checkValidation($updatedEmployee)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedEmployee), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
+
         $updatedUser = $updatedEmployee->getUser();
         $updatedPassword = $updatedUser->getPassword();
+
+        if($this->validatorService->checkValidation($updatedUser)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedUser), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
 
         if($currentPassword != $updatedPassword) {
             $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
