@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Product;
 use App\Repository\ProductRepository;
+use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -34,21 +35,28 @@ class ProductController extends AbstractController
      * @var UrlGeneratorInterface
      */
     private UrlGeneratorInterface $urlGenerator;
+    /**
+     * @var ValidatorService
+     */
+    private ValidatorService $validatorService;
 
     /**
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
      * @param UrlGeneratorInterface $urlGenerator
+     * @param ValidatorService $validatorService
      */
     public function __construct(
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
-        UrlGeneratorInterface $urlGenerator
+        UrlGeneratorInterface $urlGenerator,
+        ValidatorService $validatorService
     )
     {
         $this->serializer = $serializer;
         $this->entityManager = $entityManager;
         $this->urlGenerator = $urlGenerator;
+        $this->validatorService = $validatorService;
     }
 
     /**
@@ -97,6 +105,12 @@ class ProductController extends AbstractController
         $product = $this->serializer->deserialize($request->getContent(), Product::class, 'json');
         $product->setReleaseDate(new \DateTime());
 
+        if($this->validatorService->checkValidation($product)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($product), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
+
         $this->entityManager->persist($product);
         $this->entityManager->flush();
         $context = (new ObjectNormalizerContextBuilder())
@@ -125,6 +139,12 @@ class ProductController extends AbstractController
             Product::class,
             'json',
             [AbstractNormalizer::OBJECT_TO_POPULATE => $currentProduct]);
+
+        if($this->validatorService->checkValidation($updatedProduct)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedProduct), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
 
         $this->entityManager->persist($updatedProduct);
         $this->entityManager->flush();

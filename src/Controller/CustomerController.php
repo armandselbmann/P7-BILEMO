@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Customer;
 use App\Repository\CustomerRepository;
+use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -39,24 +40,31 @@ class CustomerController extends AbstractController
      * @var UserPasswordHasherInterface
      */
     private UserPasswordHasherInterface $userPasswordHasher;
+    /**
+     * @var ValidatorService
+     */
+    private ValidatorService $validatorService;
 
     /**
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
      * @param UrlGeneratorInterface $urlGenerator
      * @param UserPasswordHasherInterface $userPasswordHasher
+     * @param ValidatorService $validatorService
      */
     public function __construct(
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
-        UserPasswordHasherInterface $userPasswordHasher
+        UserPasswordHasherInterface $userPasswordHasher,
+        ValidatorService $validatorService
     )
     {
         $this->serializer = $serializer;
         $this->entityManager = $entityManager;
         $this->urlGenerator = $urlGenerator;
         $this->userPasswordHasher = $userPasswordHasher;
+        $this->validatorService = $validatorService;
     }
 
     /**
@@ -106,11 +114,21 @@ class CustomerController extends AbstractController
     {
         $customer = $this->serializer->deserialize($request->getContent(), Customer::class, 'json');
         $customer->setCreatedAt(new \DateTime());
+        if($this->validatorService->checkValidation($customer)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($customer), 'json'),
+                JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
 
         $user = $customer->getUser();
+        if($this->validatorService->checkValidation($user)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($user), 'json'),
+                JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
         $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
         $user->setPassword($passwordHashed);
-        $user->setRoles(['ROLE_USER']);
+        $user->setRoles(['ROLE_CLIENT']);
 
         $this->entityManager->persist($user);
         $this->entityManager->persist($customer);
@@ -143,10 +161,19 @@ class CustomerController extends AbstractController
             Customer::class,
             'json',
             [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentCustomer, AbstractObjectNormalizer::DEEP_OBJECT_TO_POPULATE => true]);
+        if($this->validatorService->checkValidation($updatedCustomer)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedCustomer), 'json'),
+                JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
 
         $updatedUser = $updatedCustomer->getUser();
         $updatedPassword = $updatedUser->getPassword();
-
+        if($this->validatorService->checkValidation($updatedUser)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedUser), 'json'),
+                JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
         if($currentPassword != $updatedPassword) {
             $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
             $updatedUser->setPassword($updatedPasswordHashed);

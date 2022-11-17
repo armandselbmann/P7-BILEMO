@@ -7,9 +7,12 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
+#[UniqueEntity('reference', message: "Veuillez saisir une référence différente. Celle-ci correspond déjà à un produit.")]
 class Product
 {
     #[ORM\Id]
@@ -20,6 +23,7 @@ class Product
 
     #[ORM\Column(length: 255)]
     #[Groups(['getProductList', 'getProduct'])]
+    #[Assert\NotBlank(message: "Vous devez saisir une référence.")]
     private ?string $reference = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
@@ -28,10 +32,12 @@ class Product
 
     #[ORM\Column(length: 255)]
     #[Groups(['getProductList', 'getProduct'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un numéro de série.")]
     private ?string $series = null;
 
     #[ORM\Column(length: 255)]
     #[Groups(['getProductList', 'getProduct'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un nom.")]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -40,18 +46,22 @@ class Product
 
     #[ORM\Column(length: 50)]
     #[Groups(['getProductList', 'getProduct'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un fabricant.")]
     private ?string $maker = null;
 
     #[ORM\Column]
     #[Groups(['getProductList', 'getProduct'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un prix.")]
     private ?int $price = null;
 
     #[ORM\Column(length: 50)]
     #[Groups(['getProduct'])]
+    #[Assert\NotBlank(message: "Vous devez saisir une couleur.")]
     private ?string $color = null;
 
     #[ORM\Column(length: 50)]
     #[Groups(['getProduct'])]
+    #[Assert\NotBlank(message: "Vous devez saisir le système d'exploitation.")]
     private ?string $platform = null;
 
     #[ORM\Column(length: 50, nullable: true)]

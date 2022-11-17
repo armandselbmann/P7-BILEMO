@@ -4,11 +4,14 @@ namespace App\Entity;
 
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
+#[UniqueEntity('email', message: "Veuillez saisir une adresse mail différente. Celle-ci correspond déjà à un utilisateur.")]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -16,23 +19,41 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
+    /**
+     * @var string|null
+     */
     #[ORM\Column(length: 180, unique: true)]
     #[Groups(['getCustomer', 'getEmployee'])]
+    #[Assert\NotBlank(message: "Vous devez saisir une adresse mail.")]
+    #[Assert\Email(message: 'Cet email {{ value }} n\'est pas valide')]
     private ?string $email = null;
 
+    /**
+     * @var array
+     */
     #[ORM\Column]
     #[Groups(['getCustomer', 'getEmployee'])]
     private array $roles = [];
 
     /**
-     * @var string The hashed password
+     * @var string|null
      */
     #[ORM\Column]
+    #[Assert\NotBlank(message: "Vous devez saisir un mot de passe.")]
+    #[Assert\Length(
+        min: 4,
+        minMessage: "Le mot de passe doit faire au moins {{ limit }} caractères.")]
     private ?string $password = null;
 
+    /**
+     * @var Customer|null
+     */
     #[ORM\OneToOne(inversedBy: 'user', cascade: ['persist', 'remove'])]
     private ?Customer $customers = null;
 
+    /**
+     * @var Employee|null
+     */
     #[ORM\OneToOne(inversedBy: 'user', cascade: ['persist', 'remove'])]
     private ?Employee $employees = null;
 
