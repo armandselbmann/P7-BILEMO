@@ -5,8 +5,11 @@ namespace App\Controller;
 use App\Entity\CustomerUser;
 use App\Repository\CustomerRepository;
 use App\Repository\CustomerUserRepository;
+use App\Services\PaginationService;
 use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -79,18 +82,26 @@ class CustomerUserController extends AbstractController
      * Get CustomerUser list
      *
      * @param CustomerUserRepository $customerUserRepository
+     * @param PaginationService $paginationService
+     * @param Request $request
      * @return JsonResponse
+     * @throws NoResultException
+     * @throws NonUniqueResultException
      */
     #[Route('/api/customer-users', name: 'listCustomerUser', methods: ['GET'])]
     #[IsGranted('ROLE_CLIENT', message: 'Vous n\'avez pas les droits suffisants pour visualiser cette liste d\'utilisateurs.')]
-    public function listCustomerUser(CustomerUserRepository $customerUserRepository): JsonResponse
+    public function listCustomerUser(
+        CustomerUserRepository $customerUserRepository,
+        PaginationService $paginationService,
+        Request $request
+    ): JsonResponse
     {
         $customerRoles = $this->security->getUser()->getRoles();
         if(in_array('ROLE_CLIENT', $customerRoles)) {
             $customerId = $this->security->getUser()->getCustomers()->getId();
-            $customerUserList = $customerUserRepository->findByCustomers($customerId);
+            $customerUserList = $paginationService->paginationListCustomer($request, 'customerUser', $customerId);
         } else {
-            $customerUserList = $customerUserRepository->findAll();
+            $customerUserList = $paginationService->paginationList($request, 'customerUser');
         }
 
         $context = (new ObjectNormalizerContextBuilder())

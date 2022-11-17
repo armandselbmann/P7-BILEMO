@@ -4,13 +4,17 @@ namespace App\Controller;
 
 use App\Entity\Product;
 use App\Repository\ProductRepository;
+use App\Services\PaginationService;
 use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
@@ -63,12 +67,21 @@ class ProductController extends AbstractController
      * Get Product list
      *
      * @param ProductRepository $productRepository
+     * @param Request $request
+     * @param PaginationService $paginationService
      * @return JsonResponse
+     * @throws NoResultException
+     * @throws NonUniqueResultException
      */
     #[Route('/api/products', name: 'listProduct', methods: ['GET'])]
-    public function listProduct(ProductRepository $productRepository): JsonResponse
+    public function listProduct(
+        ProductRepository $productRepository,
+        Request $request,
+        PaginationService $paginationService
+    ): JsonResponse
     {
-        $productList = $productRepository->findAll();
+        $productList = $paginationService->paginationList($request, 'Product');
+
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getProductList')
             ->toArray();

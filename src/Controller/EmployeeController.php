@@ -3,9 +3,11 @@
 namespace App\Controller;
 
 use App\Entity\Employee;
-use App\Repository\EmployeeRepository;
+use App\Services\PaginationService;
 use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -69,14 +71,17 @@ class EmployeeController extends AbstractController
     /**
      * Get Employee list
      *
-     * @param EmployeeRepository $employeeRepository
+     * @param PaginationService $paginationService
+     * @param Request $request
      * @return JsonResponse
+     * @throws NoResultException
+     * @throws NonUniqueResultException
      */
     #[Route('/api/employees', name: 'listEmployee', methods: ['GET'])]
-    //#[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des employé(e)s.')]
-    public function listEmployee(EmployeeRepository $employeeRepository): JsonResponse
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des employé(e)s.')]
+    public function listEmployee(PaginationService $paginationService, Request $request): JsonResponse
     {
-        $employeeList = $employeeRepository->findAll();
+        $employeeList = $paginationService->paginationList($request, 'Employee');
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getEmployeeList')
             ->toArray();
