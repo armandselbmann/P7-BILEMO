@@ -46,19 +46,26 @@ class EmployeeController extends AbstractController
      * @var ValidatorService
      */
     private ValidatorService $validatorService;
+    /**
+     * @var PaginationService
+     */
+    private PaginationService $paginationService;
 
     /**
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
      * @param UrlGeneratorInterface $urlGenerator
      * @param UserPasswordHasherInterface $userPasswordHasher
+     * @param ValidatorService $validatorService
+     * @param PaginationService $paginationService
      */
     public function __construct(
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
         UserPasswordHasherInterface $userPasswordHasher,
-        ValidatorService $validatorService
+        ValidatorService $validatorService,
+        PaginationService $paginationService
     )
     {
         $this->serializer = $serializer;
@@ -66,12 +73,12 @@ class EmployeeController extends AbstractController
         $this->urlGenerator = $urlGenerator;
         $this->userPasswordHasher = $userPasswordHasher;
         $this->validatorService = $validatorService;
+        $this->paginationService = $paginationService;
     }
 
     /**
      * Get Employee list
      *
-     * @param PaginationService $paginationService
      * @param Request $request
      * @return JsonResponse
      * @throws NoResultException
@@ -79,9 +86,9 @@ class EmployeeController extends AbstractController
      */
     #[Route('/api/employees', name: 'listEmployee', methods: ['GET'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des employé(e)s.')]
-    public function listEmployee(PaginationService $paginationService, Request $request): JsonResponse
+    public function listEmployee(Request $request): JsonResponse
     {
-        $employeeList = $paginationService->paginationList($request, Employee::class);
+        $employeeList = $this->paginationService->paginationList($request, Employee::class);
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getEmployeeList')
             ->toArray();

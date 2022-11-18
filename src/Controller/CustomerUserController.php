@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Entity\CustomerUser;
 use App\Repository\CustomerRepository;
-use App\Repository\CustomerUserRepository;
 use App\Services\PaginationService;
 use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -52,6 +51,10 @@ class CustomerUserController extends AbstractController
      * @var CustomerRepository
      */
     private CustomerRepository $customerRepository;
+    /**
+     * @var PaginationService
+     */
+    private PaginationService $paginationService;
 
     /**
      * @param SerializerInterface $serializer
@@ -60,6 +63,7 @@ class CustomerUserController extends AbstractController
      * @param Security $security
      * @param ValidatorService $validatorService
      * @param CustomerRepository $customerRepository
+     * @param PaginationService $paginationService
      */
     public function __construct(
         SerializerInterface $serializer,
@@ -67,7 +71,8 @@ class CustomerUserController extends AbstractController
         UrlGeneratorInterface $urlGenerator,
         Security $security,
         ValidatorService $validatorService,
-        CustomerRepository $customerRepository
+        CustomerRepository $customerRepository,
+        PaginationService $paginationService
     )
     {
         $this->serializer = $serializer;
@@ -76,13 +81,12 @@ class CustomerUserController extends AbstractController
         $this->security = $security;
         $this->validatorService = $validatorService;
         $this->customerRepository = $customerRepository;
+        $this->paginationService = $paginationService;
     }
 
     /**
      * Get CustomerUser list
      *
-     * @param CustomerUserRepository $customerUserRepository
-     * @param PaginationService $paginationService
      * @param Request $request
      * @return JsonResponse
      * @throws NoResultException
@@ -90,18 +94,14 @@ class CustomerUserController extends AbstractController
      */
     #[Route('/api/customer-users', name: 'listCustomerUser', methods: ['GET'])]
     #[IsGranted('ROLE_CLIENT', message: 'Vous n\'avez pas les droits suffisants pour visualiser cette liste d\'utilisateurs.')]
-    public function listCustomerUser(
-        CustomerUserRepository $customerUserRepository,
-        PaginationService $paginationService,
-        Request $request
-    ): JsonResponse
+    public function listCustomerUser(Request $request): JsonResponse
     {
         $customerRoles = $this->security->getUser()->getRoles();
         if(in_array('ROLE_CLIENT', $customerRoles)) {
             $customerId = $this->security->getUser()->getCustomers()->getId();
-            $customerUserList = $paginationService->paginationListCustomer($request, CustomerUser::class, $customerId);
+            $customerUserList = $this->paginationService->paginationListCustomer($request, CustomerUser::class, $customerId);
         } else {
-            $customerUserList = $paginationService->paginationList($request, CustomerUser::class);
+            $customerUserList = $this->paginationService->paginationList($request, CustomerUser::class);
         }
 
         $context = (new ObjectNormalizerContextBuilder())
