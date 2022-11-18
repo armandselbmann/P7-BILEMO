@@ -33,11 +33,11 @@ class PaginationService {
      *
      * @param $request
      * @param string $class
-     * @return float|int|mixed|string
+     * @return array
      * @throws NoResultException
      * @throws NonUniqueResultException
      */
-    public function paginationList($request, string $class): mixed
+    public function paginationList($request, string $class): array
     {
         $page = $request->get('page', self::PAGE_DEFAULT);
         if (empty($page)) { throw new HttpException(400,"Valeur manquante pour l'argument page.");}
@@ -59,11 +59,11 @@ class PaginationService {
      * @param $request
      * @param string $class
      * @param int $idCustomer
-     * @return float|int|mixed|string
+     * @return array
      * @throws NoResultException
      * @throws NonUniqueResultException
      */
-    public function paginationListCustomer($request, string $class, int $idCustomer): mixed
+    public function paginationListCustomer($request, string $class, int $idCustomer): array
     {
         $page = $request->get('page', self::PAGE_DEFAULT);
         if (empty($page)) { throw new HttpException(400,"Valeur manquante pour l'argument page.");}

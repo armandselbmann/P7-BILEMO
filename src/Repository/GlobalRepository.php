@@ -22,16 +22,16 @@ class GlobalRepository
     /**
      * Find all with pagination
      *
-     * @param $page
-     * @param $limit
-     * @param $entity
-     * @return float|int|mixed|string
+     * @param int $page
+     * @param int $limit
+     * @param string $entity
+     * @return array
      */
-    public function findAllWithPagination($page, $limit, $entity): mixed
+    public function findAllWithPagination(int $page, int $limit, string $entity): array
     {
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('table');
-        $qb->from("App\Entity\\$entity",'table');
+        $qb->from("$entity",'table');
         $qb->setFirstResult(($page - 1) * $limit);
         $qb->setMaxResults($limit);
         return $qb->getQuery()->getResult();
@@ -40,18 +40,18 @@ class GlobalRepository
     /**
      * Return total pages
      *
-     * @param $limit
-     * @param $entity
+     * @param int $limit
+     * @param string $entity
      * @return float|int
      * @throws NoResultException
      * @throws NonUniqueResultException
      */
-    public function totalPage($limit, $entity): float|int
+    public function totalPage(int $limit, string $entity): float|int
     {
 
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('count(table.id)');
-        $qb->from("App\Entity\\$entity",'table');
+        $qb->from("$entity",'table');
         $result = $qb->getQuery()->getSingleScalarResult();
         return $result / $limit;
     }
@@ -59,17 +59,17 @@ class GlobalRepository
     /**
      * Find all by a Customer with pagination
      *
-     * @param $page
-     * @param $limit
-     * @param $entity
-     * @param $idCustomer
-     * @return float|int|mixed|string
+     * @param int $page
+     * @param int $limit
+     * @param string $entity
+     * @param int $idCustomer
+     * @return array
      */
-    public function findAllByCustomerWithPagination($page, $limit, $entity, $idCustomer): mixed
+    public function findAllByCustomerWithPagination(int $page, int $limit, string $entity, int $idCustomer): array
     {
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('table');
-        $qb->from("App\Entity\\$entity",'table')
+        $qb->from("$entity",'table')
             ->where("table.customers = $idCustomer");
         $qb->setFirstResult(($page - 1) * $limit);
         $qb->setMaxResults($limit);
@@ -79,18 +79,18 @@ class GlobalRepository
     /**
      * Return total pages with CustomerId condition
      *
-     * @param $limit
-     * @param $entity
-     * @param $idCustomer
+     * @param int $limit
+     * @param string $entity
+     * @param int $idCustomer
      * @return float|int
      * @throws NoResultException
      * @throws NonUniqueResultException
      */
-    public function totalPageByCustomer($limit, $entity, $idCustomer): float|int
+    public function totalPageByCustomer(int $limit, string $entity, int $idCustomer): float|int
     {
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('count(table.id)');
-        $qb->from("App\Entity\\$entity",'table')
+        $qb->from("$entity",'table')
             ->where("table.customers = $idCustomer");
         $result = $qb->getQuery()->getSingleScalarResult();
         return $result / $limit;

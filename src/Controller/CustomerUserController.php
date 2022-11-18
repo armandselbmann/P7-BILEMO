@@ -99,9 +99,9 @@ class CustomerUserController extends AbstractController
         $customerRoles = $this->security->getUser()->getRoles();
         if(in_array('ROLE_CLIENT', $customerRoles)) {
             $customerId = $this->security->getUser()->getCustomers()->getId();
-            $customerUserList = $paginationService->paginationListCustomer($request, 'customerUser', $customerId);
+            $customerUserList = $paginationService->paginationListCustomer($request, CustomerUser::class, $customerId);
         } else {
-            $customerUserList = $paginationService->paginationList($request, 'customerUser');
+            $customerUserList = $paginationService->paginationList($request, CustomerUser::class);
         }
 
         $context = (new ObjectNormalizerContextBuilder())

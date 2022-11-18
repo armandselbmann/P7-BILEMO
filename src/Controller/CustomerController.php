@@ -82,7 +82,7 @@ class CustomerController extends AbstractController
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des clients.')]
     public function listCustomer(PaginationService $paginationService, Request $request): JsonResponse
     {
-        $customerList = $paginationService->paginationList($request, 'customer');
+        $customerList = $paginationService->paginationList($request, Customer::class);
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomerList')
             ->toArray();
