@@ -80,8 +80,7 @@ class ProductController extends AbstractController
         PaginationService $paginationService
     ): JsonResponse
     {
-        $productList = $paginationService->paginationList($request, 'Product');
-
+        $productList = $paginationService->paginationList($request, Product::class);
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getProductList')
             ->toArray();

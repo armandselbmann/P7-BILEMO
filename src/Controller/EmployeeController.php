@@ -81,7 +81,7 @@ class EmployeeController extends AbstractController
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des employé(e)s.')]
     public function listEmployee(PaginationService $paginationService, Request $request): JsonResponse
     {
-        $employeeList = $paginationService->paginationList($request, 'Employee');
+        $employeeList = $paginationService->paginationList($request, Employee::class);
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getEmployeeList')
             ->toArray();
