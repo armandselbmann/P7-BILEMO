@@ -46,6 +46,10 @@ class CustomerController extends AbstractController
      * @var ValidatorService
      */
     private ValidatorService $validatorService;
+    /**
+     * @var PaginationService
+     */
+    private PaginationService $paginationService;
 
     /**
      * @param SerializerInterface $serializer
@@ -53,13 +57,15 @@ class CustomerController extends AbstractController
      * @param UrlGeneratorInterface $urlGenerator
      * @param UserPasswordHasherInterface $userPasswordHasher
      * @param ValidatorService $validatorService
+     * @param PaginationService $paginationService
      */
     public function __construct(
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
         UserPasswordHasherInterface $userPasswordHasher,
-        ValidatorService $validatorService
+        ValidatorService $validatorService,
+        PaginationService $paginationService
     )
     {
         $this->serializer = $serializer;
@@ -67,12 +73,12 @@ class CustomerController extends AbstractController
         $this->urlGenerator = $urlGenerator;
         $this->userPasswordHasher = $userPasswordHasher;
         $this->validatorService = $validatorService;
+        $this->paginationService = $paginationService;
     }
 
     /**
      * Get Customer list
      *
-     * @param PaginationService $paginationService
      * @param Request $request
      * @return JsonResponse
      * @throws NoResultException
@@ -80,9 +86,9 @@ class CustomerController extends AbstractController
      */
     #[Route('/api/customers', name: 'listCustomer', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des clients.')]
-    public function listCustomer(PaginationService $paginationService, Request $request): JsonResponse
+    public function listCustomer(Request $request): JsonResponse
     {
-        $customerList = $paginationService->paginationList($request, 'customer');
+        $customerList = $this->paginationService->paginationList($request, 'customer');
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomerList')
             ->toArray();
@@ -122,14 +128,14 @@ class CustomerController extends AbstractController
         if($this->validatorService->checkValidation($customer)) {
             return new JsonResponse(
                 $this->serializer->serialize($this->validatorService->checkValidation($customer), 'json'),
-                JsonResponse::HTTP_BAD_REQUEST, [], true);
+                Response::HTTP_BAD_REQUEST, [], true);
         }
 
         $user = $customer->getUser();
         if($this->validatorService->checkValidation($user)) {
             return new JsonResponse(
                 $this->serializer->serialize($this->validatorService->checkValidation($user), 'json'),
-                JsonResponse::HTTP_BAD_REQUEST, [], true);
+                Response::HTTP_BAD_REQUEST, [], true);
         }
         $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
         $user->setPassword($passwordHashed);
@@ -169,7 +175,7 @@ class CustomerController extends AbstractController
         if($this->validatorService->checkValidation($updatedCustomer)) {
             return new JsonResponse(
                 $this->serializer->serialize($this->validatorService->checkValidation($updatedCustomer), 'json'),
-                JsonResponse::HTTP_BAD_REQUEST, [], true);
+                Response::HTTP_BAD_REQUEST, [], true);
         }
 
         $updatedUser = $updatedCustomer->getUser();
@@ -177,7 +183,7 @@ class CustomerController extends AbstractController
         if($this->validatorService->checkValidation($updatedUser)) {
             return new JsonResponse(
                 $this->serializer->serialize($this->validatorService->checkValidation($updatedUser), 'json'),
-                JsonResponse::HTTP_BAD_REQUEST, [], true);
+                Response::HTTP_BAD_REQUEST, [], true);
         }
         if($currentPassword != $updatedPassword) {
             $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($updatedUser, $updatedPassword);

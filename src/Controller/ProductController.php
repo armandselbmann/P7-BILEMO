@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\Entity\Product;
-use App\Repository\ProductRepository;
 use App\Services\PaginationService;
 use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -14,7 +13,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
@@ -43,44 +41,45 @@ class ProductController extends AbstractController
      * @var ValidatorService
      */
     private ValidatorService $validatorService;
-
+    /**
+     * @var PaginationService
+     */
+    private PaginationService $paginationService;
     /**
      * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
      * @param UrlGeneratorInterface $urlGenerator
      * @param ValidatorService $validatorService
+     * @param PaginationService $paginationService
      */
     public function __construct(
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
-        ValidatorService $validatorService
+        ValidatorService $validatorService,
+        PaginationService $paginationService
+
     )
     {
         $this->serializer = $serializer;
         $this->entityManager = $entityManager;
         $this->urlGenerator = $urlGenerator;
         $this->validatorService = $validatorService;
+        $this->paginationService = $paginationService;
     }
 
     /**
      * Get Product list
      *
-     * @param ProductRepository $productRepository
      * @param Request $request
-     * @param PaginationService $paginationService
      * @return JsonResponse
      * @throws NoResultException
      * @throws NonUniqueResultException
      */
     #[Route('/api/products', name: 'listProduct', methods: ['GET'])]
-    public function listProduct(
-        ProductRepository $productRepository,
-        Request $request,
-        PaginationService $paginationService
-    ): JsonResponse
+    public function listProduct(Request $request): JsonResponse
     {
-        $productList = $paginationService->paginationList($request, 'Product');
+        $productList = $this->paginationService->paginationList($request, 'Product');
 
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getProductList')
