@@ -8,6 +8,7 @@ use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
+use Psr\Cache\InvalidArgumentException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,6 +21,7 @@ use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuild
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 /**
  * Customer Controller methods
@@ -50,6 +52,10 @@ class CustomerController extends AbstractController
      * @var PaginationService
      */
     private PaginationService $paginationService;
+    /**
+     * @var TagAwareCacheInterface
+     */
+    private TagAwareCacheInterface $cachePool;
 
     /**
      * @param SerializerInterface $serializer
@@ -65,7 +71,8 @@ class CustomerController extends AbstractController
         UrlGeneratorInterface $urlGenerator,
         UserPasswordHasherInterface $userPasswordHasher,
         ValidatorService $validatorService,
-        PaginationService $paginationService
+        PaginationService $paginationService,
+        TagAwareCacheInterface $cachePool
     )
     {
         $this->serializer = $serializer;
@@ -74,6 +81,7 @@ class CustomerController extends AbstractController
         $this->userPasswordHasher = $userPasswordHasher;
         $this->validatorService = $validatorService;
         $this->paginationService = $paginationService;
+        $this->cachePool = $cachePool;
     }
 
     /**
@@ -82,7 +90,7 @@ class CustomerController extends AbstractController
      * @param Request $request
      * @return JsonResponse
      * @throws NoResultException
-     * @throws NonUniqueResultException
+     * @throws NonUniqueResultException|InvalidArgumentException
      */
     #[Route('/api/customers', name: 'listCustomer', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des clients.')]
@@ -118,6 +126,7 @@ class CustomerController extends AbstractController
      *
      * @param Request $request
      * @return JsonResponse
+     * @throws InvalidArgumentException
      */
     #[Route('/api/customers', name: 'createCustomer', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un client.')]
@@ -145,6 +154,8 @@ class CustomerController extends AbstractController
         $this->entityManager->persist($customer);
         $this->entityManager->flush();
 
+        $this->cachePool->invalidateTags([stripslashes(Customer::class)]);
+
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomer')
             ->toArray();
@@ -160,6 +171,7 @@ class CustomerController extends AbstractController
      * @param Request $request
      * @param Customer $currentCustomer
      * @return JsonResponse
+     * @throws InvalidArgumentException
      */
     #[Route('/api/customers/{id}', name: 'updateCustomer', methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un client.')]
@@ -193,6 +205,8 @@ class CustomerController extends AbstractController
         $this->entityManager->persist($updatedCustomer);
         $this->entityManager->flush();
 
+        $this->cachePool->invalidateTags([stripslashes(Customer::class)]);
+
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomer')
             ->toArray();
@@ -207,6 +221,7 @@ class CustomerController extends AbstractController
      *
      * @param Customer $customer
      * @return JsonResponse
+     * @throws InvalidArgumentException
      */
     #[Route('/api/customers/{id}', name: 'deleteCustomer', methods: ['DELETE'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un client.')]
@@ -214,6 +229,8 @@ class CustomerController extends AbstractController
     {
         $this->entityManager->remove($customer);
         $this->entityManager->flush();
+
+        $this->cachePool->invalidateTags([stripslashes(Customer::class)]);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

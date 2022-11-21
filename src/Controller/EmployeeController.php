@@ -8,6 +8,7 @@ use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
+use Psr\Cache\InvalidArgumentException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,6 +21,7 @@ use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuild
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 /**
  * Employee Controller methods
@@ -50,6 +52,11 @@ class EmployeeController extends AbstractController
      * @var PaginationService
      */
     private PaginationService $paginationService;
+    /**
+     * @var TagAwareCacheInterface
+     */
+    private TagAwareCacheInterface $cachePool;
+
 
     /**
      * @param SerializerInterface $serializer
@@ -58,6 +65,7 @@ class EmployeeController extends AbstractController
      * @param UserPasswordHasherInterface $userPasswordHasher
      * @param ValidatorService $validatorService
      * @param PaginationService $paginationService
+     * @param TagAwareCacheInterface $cachePool
      */
     public function __construct(
         SerializerInterface $serializer,
@@ -65,7 +73,8 @@ class EmployeeController extends AbstractController
         UrlGeneratorInterface $urlGenerator,
         UserPasswordHasherInterface $userPasswordHasher,
         ValidatorService $validatorService,
-        PaginationService $paginationService
+        PaginationService $paginationService,
+        TagAwareCacheInterface $cachePool
     )
     {
         $this->serializer = $serializer;
@@ -74,6 +83,7 @@ class EmployeeController extends AbstractController
         $this->userPasswordHasher = $userPasswordHasher;
         $this->validatorService = $validatorService;
         $this->paginationService = $paginationService;
+        $this->cachePool = $cachePool;
     }
 
     /**
@@ -82,7 +92,7 @@ class EmployeeController extends AbstractController
      * @param Request $request
      * @return JsonResponse
      * @throws NoResultException
-     * @throws NonUniqueResultException
+     * @throws NonUniqueResultException|InvalidArgumentException
      */
     #[Route('/api/employees', name: 'listEmployee', methods: ['GET'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des employé(e)s.')]
@@ -118,6 +128,7 @@ class EmployeeController extends AbstractController
      *
      * @param Request $request
      * @return JsonResponse
+     * @throws InvalidArgumentException
      */
     #[Route('/api/employees', name: 'createEmployee', methods: ['POST'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un(e) employé(e).')]
@@ -145,6 +156,8 @@ class EmployeeController extends AbstractController
         $this->entityManager->persist($employee);
         $this->entityManager->flush();
 
+        $this->cachePool->invalidateTags([stripslashes(Employee::class)]);
+
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getEmployee')
             ->toArray();
@@ -160,6 +173,7 @@ class EmployeeController extends AbstractController
      * @param Request $request
      * @param Employee $currentEmployee
      * @return JsonResponse
+     * @throws InvalidArgumentException
      */
     #[Route('/api/employees/{id}', name: 'updateEmployee', methods: ['PUT'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un(e) employé(e).')]
@@ -196,6 +210,8 @@ class EmployeeController extends AbstractController
         $this->entityManager->persist($updatedEmployee);
         $this->entityManager->flush();
 
+        $this->cachePool->invalidateTags([stripslashes(Employee::class)]);
+
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getEmployee')
             ->toArray();
@@ -210,6 +226,7 @@ class EmployeeController extends AbstractController
      *
      * @param Employee $employee
      * @return JsonResponse
+     * @throws InvalidArgumentException
      */
     #[Route('/api/employees/{id}', name: 'deleteEmployee', methods: ['DELETE'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un(e) employé(e).')]
@@ -217,6 +234,8 @@ class EmployeeController extends AbstractController
     {
         $this->entityManager->remove($employee);
         $this->entityManager->flush();
+
+        $this->cachePool->invalidateTags([stripslashes(Employee::class)]);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

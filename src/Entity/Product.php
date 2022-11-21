@@ -144,7 +144,7 @@ class Product
     #[Groups(['getProduct'])]
     private ?int $weight = null;
 
-    #[ORM\OneToMany(mappedBy: 'products', targetEntity: Image::class, orphanRemoval: true)]
+    #[ORM\OneToMany(mappedBy: 'products', targetEntity: Image::class, fetch: 'EAGER', orphanRemoval: true)]
     #[Groups(['getProduct'])]
     private Collection $images;
 

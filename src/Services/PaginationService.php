@@ -5,7 +5,10 @@ namespace App\Services;
 use App\Repository\GlobalRepository;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
+use Psr\Cache\InvalidArgumentException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 /**
  * Service for Pagination
@@ -19,13 +22,17 @@ class PaginationService {
      * @var GlobalRepository
      */
     private GlobalRepository $globalRepository;
+    private TagAwareCacheInterface $cachePool;
+
 
     /**
      * @param GlobalRepository $globalRepository
+     * @param TagAwareCacheInterface $cachePool
      */
-    public function __construct(GlobalRepository $globalRepository)
+    public function __construct(GlobalRepository $globalRepository, TagAwareCacheInterface $cachePool)
     {
         $this->globalRepository = $globalRepository;
+        $this->cachePool = $cachePool;
     }
 
     /**
@@ -35,7 +42,7 @@ class PaginationService {
      * @param string $class
      * @return array
      * @throws NoResultException
-     * @throws NonUniqueResultException
+     * @throws NonUniqueResultException|InvalidArgumentException
      */
     public function paginationList($request, string $class): array
     {
@@ -44,7 +51,14 @@ class PaginationService {
         $limit = $request->get('limit', self::LIMIT_DEFAULT);
         if (empty($limit)) { throw new HttpException(400,"Valeur manquante pour l'argument limit.");}
 
-        $list = $this->globalRepository->findAllWithPagination($page, $limit, $class);
+        // Create idCache
+        $idCache = stripslashes($class) . "-" . $page . "-" . $limit;
+        // Cache retrieval based on idCache or cached request
+        $list = $this->cachePool->get($idCache, function (ItemInterface $item) use ($class, $page, $limit) {
+            $item->tag(stripslashes($class));
+            return $this->globalRepository->findAllWithPagination($page, $limit, $class);
+        });
+
         $totalPage = ceil($this->globalRepository->totalPage($limit, $class));
 
         if (empty($list)) {
@@ -61,7 +75,7 @@ class PaginationService {
      * @param int $idCustomer
      * @return array
      * @throws NoResultException
-     * @throws NonUniqueResultException
+     * @throws NonUniqueResultException|InvalidArgumentException
      */
     public function paginationListCustomer($request, string $class, int $idCustomer): array
     {
@@ -70,7 +84,14 @@ class PaginationService {
         $limit = $request->get('limit', self::LIMIT_DEFAULT);
         if (empty($limit)) { throw new HttpException(400,"Valeur manquante pour l'argument limit.");}
 
-        $list = $this->globalRepository->findAllByCustomerWithPagination($page, $limit, $class, $idCustomer);
+        // Create idCache
+        $idCache = stripslashes($class) . "-" . $page . "-" . $limit;
+        // Cache retrieval based on idCache or cached request
+        $list = $this->cachePool->get($idCache, function (ItemInterface $item) use ($class, $page, $limit, $idCustomer) {
+            $item->tag(stripslashes($class));
+            return $this->globalRepository->findAllByCustomerWithPagination($page, $limit, $class, $idCustomer);
+        });
+
         $totalPage = ceil($this->globalRepository->totalPageByCustomer($limit, $class, $idCustomer));
 
         if (empty($list)) {

@@ -8,6 +8,7 @@ use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
+use Psr\Cache\InvalidArgumentException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,6 +19,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 
 /**
@@ -45,6 +47,10 @@ class ProductController extends AbstractController
      * @var PaginationService
      */
     private PaginationService $paginationService;
+    /**
+     * @var TagAwareCacheInterface
+     */
+    private TagAwareCacheInterface $cachePool;
 
     /**
      * @param SerializerInterface $serializer
@@ -52,13 +58,15 @@ class ProductController extends AbstractController
      * @param UrlGeneratorInterface $urlGenerator
      * @param ValidatorService $validatorService
      * @param PaginationService $paginationService
+     * @param TagAwareCacheInterface $cachePool
      */
     public function __construct(
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
         ValidatorService $validatorService,
-        PaginationService $paginationService
+        PaginationService $paginationService,
+        TagAwareCacheInterface $cachePool
     )
     {
         $this->serializer = $serializer;
@@ -66,6 +74,7 @@ class ProductController extends AbstractController
         $this->urlGenerator = $urlGenerator;
         $this->validatorService = $validatorService;
         $this->paginationService = $paginationService;
+        $this->cachePool = $cachePool;
     }
 
     /**
@@ -73,8 +82,7 @@ class ProductController extends AbstractController
      *
      * @param Request $request
      * @return JsonResponse
-     * @throws NoResultException
-     * @throws NonUniqueResultException
+     * @throws NonUniqueResultException|InvalidArgumentException|NoResultException
      */
     #[Route('/api/products', name: 'listProduct', methods: ['GET'])]
     public function listProduct(Request $request): JsonResponse
@@ -108,6 +116,7 @@ class ProductController extends AbstractController
      *
      * @param Request $request
      * @return JsonResponse
+     * @throws InvalidArgumentException
      */
     #[Route('/api/products', name: 'createProduct', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un produit.')]
@@ -124,6 +133,9 @@ class ProductController extends AbstractController
 
         $this->entityManager->persist($product);
         $this->entityManager->flush();
+
+        $this->cachePool->invalidateTags([stripslashes(Product::class)]);
+
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getProduct')
             ->toArray();
@@ -141,6 +153,7 @@ class ProductController extends AbstractController
      * @param Request $request
      * @param Product $currentProduct
      * @return JsonResponse
+     * @throws InvalidArgumentException
      */
     #[Route('/api/products/{id}', name: 'updateProduct', methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un produit.')]
@@ -160,6 +173,8 @@ class ProductController extends AbstractController
         $this->entityManager->persist($updatedProduct);
         $this->entityManager->flush();
 
+        $this->cachePool->invalidateTags([stripslashes(Product::class)]);
+
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getProduct')
             ->toArray();
@@ -174,6 +189,7 @@ class ProductController extends AbstractController
      *
      * @param Product $product
      * @return JsonResponse
+     * @throws InvalidArgumentException
      */
     #[Route('/api/products/{id}', name: 'deleteProduct', methods: ['DELETE'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un produit.')]
@@ -181,6 +197,8 @@ class ProductController extends AbstractController
     {
         $this->entityManager->remove($product);
         $this->entityManager->flush();
+
+        $this->cachePool->invalidateTags([stripslashes(Product::class)]);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
