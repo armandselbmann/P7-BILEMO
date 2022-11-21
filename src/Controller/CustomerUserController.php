@@ -224,14 +224,13 @@ class CustomerUserController extends AbstractController
         } else {
             if (!empty($content['idCustomer'])) {
                 $customerId = $content['idCustomer'];
+                if (!$this->customerRepository->findOneById($customerId)) {
+                    throw new HttpException(404, 'Ce client n\'existe pas.');
+                }
                 $updatedCustomerUser->setCustomers($this->customerRepository->findOneById($customerId));
-            } else {
-                throw new HttpException(400, 'Veuillez saisir un numéro de Client.');
-            }
-            if (!$this->customerRepository->findOneById($customerId)) {
-                throw new HttpException(404, 'Ce client n\'existe pas.');
             }
         }
+
 
         if($this->validatorService->checkValidation($updatedCustomerUser)) {
             return new JsonResponse(
