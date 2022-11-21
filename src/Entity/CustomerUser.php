@@ -85,7 +85,7 @@ class CustomerUser
     #[Groups(['getCustomerUser'])]
     private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\ManyToOne(inversedBy: 'customerUsers')]
+    #[ORM\ManyToOne(fetch: 'EAGER', inversedBy: 'customerUsers')]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['getCustomerUserList', 'getCustomerUser'])]
     private ?Customer $customers = null;

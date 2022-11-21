@@ -95,11 +95,11 @@ class Customer
     #[Groups(['getCustomer'])]
     private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\OneToMany(mappedBy: 'customers', targetEntity: CustomerUser::class, orphanRemoval: true)]
+    #[ORM\OneToMany(mappedBy: 'customers', targetEntity: CustomerUser::class, fetch: 'EAGER', orphanRemoval: true)]
     #[Groups(['getCustomer'])]
     private Collection $customerUsers;
 
-    #[ORM\OneToOne(mappedBy: 'customers', cascade: ['persist', 'remove'])]
+    #[ORM\OneToOne(mappedBy: 'customers', cascade: ['persist', 'remove'], fetch: 'EAGER')]
     #[Groups(['getCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir une adresse mail et un mot de passe.")]
     private ?User $user = null;

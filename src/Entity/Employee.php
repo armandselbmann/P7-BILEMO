@@ -51,7 +51,7 @@ class Employee
     #[Groups(['getEmployee'])]
     private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\OneToOne(mappedBy: 'employees', cascade: ['persist', 'remove'])]
+    #[ORM\OneToOne(mappedBy: 'employees', cascade: ['persist', 'remove'], fetch: 'EAGER')]
     #[Groups(['getEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir une adresse mail et un mot de passe.")]
     private ?User $user = null;
