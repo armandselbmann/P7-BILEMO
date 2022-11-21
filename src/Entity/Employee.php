@@ -6,6 +6,7 @@ use App\Repository\EmployeeRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: EmployeeRepository::class)]
 class Employee
@@ -18,14 +19,32 @@ class Employee
 
     #[ORM\Column(length: 255)]
     #[Groups(['getEmployeeList', 'getEmployee'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un nom.")]
+    #[Assert\Length(
+        min: 3,
+        max: 50,
+        minMessage: "Le nom doit faire au moins {{ limit }} caractères.",
+        maxMessage: "Le nom ne peut pas contenir plus de {{ limit }} caractères.")]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
     #[Groups(['getEmployeeList', 'getEmployee'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un prénom.")]
+    #[Assert\Length(
+        min: 3,
+        max: 50,
+        minMessage: "Le prénom doit faire au moins {{ limit }} caractères.",
+        maxMessage: "Le prénom ne peut pas contenir plus de {{ limit }} caractères.")]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 50)]
     #[Groups(['getEmployee'])]
+    #[Assert\NotBlank(message: "Vous devez saisir un numéro de téléphone.")]
+    #[Assert\Length(
+        min: 4,
+        max: 50,
+        minMessage: "Le numéro de téléphone doit faire au moins {{ limit }} caractères.",
+        maxMessage: "Le numéro de téléphone ne peut pas contenir plus de {{ limit }} caractères.")]
     private ?string $phone = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
@@ -34,6 +53,7 @@ class Employee
 
     #[ORM\OneToOne(mappedBy: 'employees', cascade: ['persist', 'remove'])]
     #[Groups(['getEmployee'])]
+    #[Assert\NotBlank(message: "Vous devez saisir une adresse mail et un mot de passe.")]
     private ?User $user = null;
 
     public function getId(): ?int

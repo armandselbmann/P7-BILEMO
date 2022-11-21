@@ -3,8 +3,12 @@
 namespace App\Controller;
 
 use App\Entity\Customer;
-use App\Repository\CustomerRepository;
+use App\Services\PaginationService;
+use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,23 +21,78 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 
+/**
+ * Customer Controller methods
+ */
 class CustomerController extends AbstractController
 {
     /**
+     * @var SerializerInterface
+     */
+    private SerializerInterface $serializer;
+    /**
+     * @var EntityManagerInterface
+     */
+    private EntityManagerInterface $entityManager;
+    /**
+     * @var UrlGeneratorInterface
+     */
+    private UrlGeneratorInterface $urlGenerator;
+    /**
+     * @var UserPasswordHasherInterface
+     */
+    private UserPasswordHasherInterface $userPasswordHasher;
+    /**
+     * @var ValidatorService
+     */
+    private ValidatorService $validatorService;
+    /**
+     * @var PaginationService
+     */
+    private PaginationService $paginationService;
+
+    /**
+     * @param SerializerInterface $serializer
+     * @param EntityManagerInterface $entityManager
+     * @param UrlGeneratorInterface $urlGenerator
+     * @param UserPasswordHasherInterface $userPasswordHasher
+     * @param ValidatorService $validatorService
+     * @param PaginationService $paginationService
+     */
+    public function __construct(
+        SerializerInterface $serializer,
+        EntityManagerInterface $entityManager,
+        UrlGeneratorInterface $urlGenerator,
+        UserPasswordHasherInterface $userPasswordHasher,
+        ValidatorService $validatorService,
+        PaginationService $paginationService
+    )
+    {
+        $this->serializer = $serializer;
+        $this->entityManager = $entityManager;
+        $this->urlGenerator = $urlGenerator;
+        $this->userPasswordHasher = $userPasswordHasher;
+        $this->validatorService = $validatorService;
+        $this->paginationService = $paginationService;
+    }
+
+    /**
      * Get Customer list
      *
-     * @param CustomerRepository $customerRepository
-     * @param SerializerInterface $serializer
+     * @param Request $request
      * @return JsonResponse
+     * @throws NoResultException
+     * @throws NonUniqueResultException
      */
     #[Route('/api/customers', name: 'listCustomer', methods: ['GET'])]
-    public function listCustomer(CustomerRepository $customerRepository, SerializerInterface $serializer): JsonResponse
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des clients.')]
+    public function listCustomer(Request $request): JsonResponse
     {
-        $customerList = $customerRepository->findAll();
+        $customerList = $this->paginationService->paginationList($request, Customer::class);
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomerList')
             ->toArray();
-        $jsonCustomerList = $serializer->serialize($customerList, 'json', $context);
+        $jsonCustomerList = $this->serializer->serialize($customerList, 'json', $context);
         return new JsonResponse($jsonCustomerList, Response::HTTP_OK, [], true);
     }
 
@@ -41,16 +100,16 @@ class CustomerController extends AbstractController
      * Get Customer detail
      *
      * @param Customer $customer
-     * @param SerializerInterface $serializer
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'detailCustomer', methods: ['GET'])]
-    public function detailCustomer(Customer $customer, SerializerInterface $serializer): JsonResponse
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser un client.')]
+    public function detailCustomer(Customer $customer): JsonResponse
     {
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomer')
             ->toArray();
-        $jsonCustomer = $serializer->serialize($customer, 'json', $context);
+        $jsonCustomer = $this->serializer->serialize($customer, 'json', $context);
         return new JsonResponse($jsonCustomer, Response::HTTP_OK, [], true);
     }
 
@@ -58,38 +117,39 @@ class CustomerController extends AbstractController
      * Create a Customer
      *
      * @param Request $request
-     * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $entityManager
-     * @param UrlGeneratorInterface $urlGenerator
-     * @param UserPasswordHasherInterface $userPasswordHasher
      * @return JsonResponse
      */
     #[Route('/api/customers', name: 'createCustomer', methods: ['POST'])]
-    public function createCustomer(
-        Request $request,
-        SerializerInterface $serializer,
-        EntityManagerInterface $entityManager,
-        UrlGeneratorInterface $urlGenerator,
-        UserPasswordHasherInterface $userPasswordHasher
-    ): JsonResponse
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un client.')]
+    public function createCustomer(Request $request): JsonResponse
     {
-        $customer = $serializer->deserialize($request->getContent(), Customer::class, 'json');
+        $customer = $this->serializer->deserialize($request->getContent(), Customer::class, 'json');
         $customer->setCreatedAt(new \DateTime());
+        if($this->validatorService->checkValidation($customer)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($customer), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
 
         $user = $customer->getUser();
-        $passwordHashed = $userPasswordHasher->hashPassword($user, $user->getPassword());
+        if($this->validatorService->checkValidation($user)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($user), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
+        $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
         $user->setPassword($passwordHashed);
-        $user->setRoles(['ROLE_USER']);
+        $user->setRoles(['ROLE_CLIENT']);
 
-        $entityManager->persist($user);
-        $entityManager->persist($customer);
-        $entityManager->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($customer);
+        $this->entityManager->flush();
 
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getCustomer')
             ->toArray();
-        $jsonCustomer = $serializer->serialize($customer, 'json', $context);
-        $location = $urlGenerator->generate('detailCustomer', ['id' => $customer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $jsonCustomer = $this->serializer->serialize($customer, 'json', $context);
+        $location = $this->urlGenerator->generate('detailCustomer', ['id' => $customer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonCustomer, Response::HTTP_CREATED, ["Location" => $location], true);
     }
@@ -99,54 +159,61 @@ class CustomerController extends AbstractController
      *
      * @param Request $request
      * @param Customer $currentCustomer
-     * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $entityManager
-     * @param UserPasswordHasherInterface $userPasswordHasher
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'updateCustomer', methods: ['PUT'])]
-    public function updateCustomer(
-        Request $request,
-        Customer $currentCustomer,
-        SerializerInterface $serializer,
-        EntityManagerInterface $entityManager,
-        UserPasswordHasherInterface $userPasswordHasher,
-    ): JsonResponse
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un client.')]
+    public function updateCustomer(Request $request, Customer $currentCustomer): JsonResponse
     {
         $currentUser = $currentCustomer->getUser();
         $currentPassword = $currentUser->getPassword();
 
-        $updatedCustomer = $serializer->deserialize($request->getContent(),
+        $updatedCustomer = $this->serializer->deserialize($request->getContent(),
             Customer::class,
             'json',
             [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentCustomer, AbstractObjectNormalizer::DEEP_OBJECT_TO_POPULATE => true]);
+        if($this->validatorService->checkValidation($updatedCustomer)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedCustomer), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
 
         $updatedUser = $updatedCustomer->getUser();
         $updatedPassword = $updatedUser->getPassword();
-
+        if($this->validatorService->checkValidation($updatedUser)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedUser), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
         if($currentPassword != $updatedPassword) {
-            $updatedPasswordHashed = $userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
+            $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
             $updatedUser->setPassword($updatedPasswordHashed);
         }
 
-        $entityManager->persist($updatedCustomer);
-        $entityManager->flush();
+        $this->entityManager->persist($updatedCustomer);
+        $this->entityManager->flush();
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        $context = (new ObjectNormalizerContextBuilder())
+            ->withGroups('getCustomer')
+            ->toArray();
+        $jsonCustomer = $this->serializer->serialize($updatedCustomer, 'json', $context);
+        $location = $this->urlGenerator->generate('detailCustomer', ['id' => $updatedCustomer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new JsonResponse($jsonCustomer, Response::HTTP_OK, ["Location" => $location], true);
     }
 
     /**
      * Delete a Customer
      *
      * @param Customer $customer
-     * @param EntityManagerInterface $entityManager
      * @return JsonResponse
      */
     #[Route('/api/customers/{id}', name: 'deleteCustomer', methods: ['DELETE'])]
-    public function deleteCustomer(Customer $customer, EntityManagerInterface $entityManager): JsonResponse
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un client.')]
+    public function deleteCustomer(Customer $customer): JsonResponse
     {
-        $entityManager->remove($customer);
-        $entityManager->flush();
+        $this->entityManager->remove($customer);
+        $this->entityManager->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

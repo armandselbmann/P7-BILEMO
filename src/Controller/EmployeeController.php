@@ -3,8 +3,12 @@
 namespace App\Controller;
 
 use App\Entity\Employee;
-use App\Repository\EmployeeRepository;
+use App\Services\PaginationService;
+use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,23 +21,78 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 
+/**
+ * Employee Controller methods
+ */
 class EmployeeController extends AbstractController
 {
     /**
+     * @var SerializerInterface
+     */
+    private SerializerInterface $serializer;
+    /**
+     * @var EntityManagerInterface
+     */
+    private EntityManagerInterface $entityManager;
+    /**
+     * @var UrlGeneratorInterface
+     */
+    private UrlGeneratorInterface $urlGenerator;
+    /**
+     * @var UserPasswordHasherInterface
+     */
+    private UserPasswordHasherInterface $userPasswordHasher;
+    /**
+     * @var ValidatorService
+     */
+    private ValidatorService $validatorService;
+    /**
+     * @var PaginationService
+     */
+    private PaginationService $paginationService;
+
+    /**
+     * @param SerializerInterface $serializer
+     * @param EntityManagerInterface $entityManager
+     * @param UrlGeneratorInterface $urlGenerator
+     * @param UserPasswordHasherInterface $userPasswordHasher
+     * @param ValidatorService $validatorService
+     * @param PaginationService $paginationService
+     */
+    public function __construct(
+        SerializerInterface $serializer,
+        EntityManagerInterface $entityManager,
+        UrlGeneratorInterface $urlGenerator,
+        UserPasswordHasherInterface $userPasswordHasher,
+        ValidatorService $validatorService,
+        PaginationService $paginationService
+    )
+    {
+        $this->serializer = $serializer;
+        $this->entityManager = $entityManager;
+        $this->urlGenerator = $urlGenerator;
+        $this->userPasswordHasher = $userPasswordHasher;
+        $this->validatorService = $validatorService;
+        $this->paginationService = $paginationService;
+    }
+
+    /**
      * Get Employee list
      *
-     * @param EmployeeRepository $employeeRepository
-     * @param SerializerInterface $serializer
+     * @param Request $request
      * @return JsonResponse
+     * @throws NoResultException
+     * @throws NonUniqueResultException
      */
     #[Route('/api/employees', name: 'listEmployee', methods: ['GET'])]
-    public function listEmployee(EmployeeRepository $employeeRepository, SerializerInterface $serializer): JsonResponse
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des employé(e)s.')]
+    public function listEmployee(Request $request): JsonResponse
     {
-        $employeeList = $employeeRepository->findAll();
+        $employeeList = $this->paginationService->paginationList($request, Employee::class);
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getEmployeeList')
             ->toArray();
-        $jsonEmployeeList = $serializer->serialize($employeeList, 'json', $context);
+        $jsonEmployeeList = $this->serializer->serialize($employeeList, 'json', $context);
         return new JsonResponse($jsonEmployeeList, Response::HTTP_OK, [], true);
     }
 
@@ -41,16 +100,16 @@ class EmployeeController extends AbstractController
      * Get Employee detail
      *
      * @param Employee $employee
-     * @param SerializerInterface $serializer
      * @return JsonResponse
      */
     #[Route('/api/employees/{id}', name: 'detailEmployee', methods: ['GET'])]
-    public function detailEmployee(Employee $employee, SerializerInterface $serializer): JsonResponse
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser un(e) employé(e).')]
+    public function detailEmployee(Employee $employee): JsonResponse
     {
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getEmployee')
             ->toArray();
-        $jsonEmployee = $serializer->serialize($employee, 'json', $context);
+        $jsonEmployee = $this->serializer->serialize($employee, 'json', $context);
         return new JsonResponse($jsonEmployee, Response::HTTP_OK, [], true);
     }
 
@@ -58,38 +117,39 @@ class EmployeeController extends AbstractController
      * Create an Employee
      *
      * @param Request $request
-     * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $entityManager
-     * @param UrlGeneratorInterface $urlGenerator
-     * @param UserPasswordHasherInterface $userPasswordHasher
      * @return JsonResponse
      */
     #[Route('/api/employees', name: 'createEmployee', methods: ['POST'])]
-    public function createEmployee(
-        Request $request,
-        SerializerInterface $serializer,
-        EntityManagerInterface $entityManager,
-        UrlGeneratorInterface $urlGenerator,
-        UserPasswordHasherInterface $userPasswordHasher
-    ): JsonResponse
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un(e) employé(e).')]
+    public function createEmployee(Request $request): JsonResponse
     {
-        $employee = $serializer->deserialize($request->getContent(), Employee::class, 'json');
+        $employee = $this->serializer->deserialize($request->getContent(), Employee::class, 'json');
         $employee->setCreatedAt(new \DateTime());
+        if($this->validatorService->checkValidation($employee)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($employee), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
 
         $user = $employee->getUser();
-        $passwordHashed = $userPasswordHasher->hashPassword($user, $user->getPassword());
+        if($this->validatorService->checkValidation($user)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($user), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
+        $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
         $user->setPassword($passwordHashed);
         $user->setRoles(['ROLE_ADMIN']);
 
-        $entityManager->persist($user);
-        $entityManager->persist($employee);
-        $entityManager->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($employee);
+        $this->entityManager->flush();
 
         $context = (new ObjectNormalizerContextBuilder())
             ->withGroups('getEmployee')
             ->toArray();
-        $jsonEmployee = $serializer->serialize($employee, 'json', $context);
-        $location = $urlGenerator->generate('detailEmployee', ['id' => $employee->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $jsonEmployee = $this->serializer->serialize($employee, 'json', $context);
+        $location = $this->urlGenerator->generate('detailEmployee', ['id' => $employee->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonEmployee, Response::HTTP_CREATED, ["Location" => $location], true);
     }
@@ -99,54 +159,64 @@ class EmployeeController extends AbstractController
      *
      * @param Request $request
      * @param Employee $currentEmployee
-     * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $entityManager
-     * @param UserPasswordHasherInterface $userPasswordHasher
      * @return JsonResponse
      */
     #[Route('/api/employees/{id}', name: 'updateEmployee', methods: ['PUT'])]
-    public function updateEmployee(
-        Request $request,
-        Employee $currentEmployee,
-        SerializerInterface $serializer,
-        EntityManagerInterface $entityManager,
-        UserPasswordHasherInterface $userPasswordHasher,
-    ): JsonResponse
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un(e) employé(e).')]
+    public function updateEmployee(Request $request, Employee $currentEmployee): JsonResponse
     {
         $currentUser = $currentEmployee->getUser();
         $currentPassword = $currentUser->getPassword();
 
-        $updatedEmployee = $serializer->deserialize($request->getContent(),
+        $updatedEmployee = $this->serializer->deserialize($request->getContent(),
             Employee::class,
             'json',
             [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentEmployee, AbstractObjectNormalizer::DEEP_OBJECT_TO_POPULATE => true]);
 
+        if($this->validatorService->checkValidation($updatedEmployee)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedEmployee), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
+
         $updatedUser = $updatedEmployee->getUser();
         $updatedPassword = $updatedUser->getPassword();
 
+        if($this->validatorService->checkValidation($updatedUser)) {
+            return new JsonResponse(
+                $this->serializer->serialize($this->validatorService->checkValidation($updatedUser), 'json'),
+                Response::HTTP_BAD_REQUEST, [], true);
+        }
+
         if($currentPassword != $updatedPassword) {
-            $updatedPasswordHashed = $userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
+            $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
             $updatedUser->setPassword($updatedPasswordHashed);
         }
 
-        $entityManager->persist($updatedEmployee);
-        $entityManager->flush();
+        $this->entityManager->persist($updatedEmployee);
+        $this->entityManager->flush();
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        $context = (new ObjectNormalizerContextBuilder())
+            ->withGroups('getEmployee')
+            ->toArray();
+        $jsonEmployee = $this->serializer->serialize($updatedEmployee, 'json', $context);
+        $location = $this->urlGenerator->generate('detailEmployee', ['id' => $updatedEmployee->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new JsonResponse($jsonEmployee, Response::HTTP_OK, ["Location" => $location], true);
     }
 
     /**
      * Delete an Employee
      *
      * @param Employee $employee
-     * @param EntityManagerInterface $entityManager
      * @return JsonResponse
      */
     #[Route('/api/employees/{id}', name: 'deleteEmployee', methods: ['DELETE'])]
-    public function deleteEmployee(Employee $employee, EntityManagerInterface $entityManager): JsonResponse
+    #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un(e) employé(e).')]
+    public function deleteEmployee(Employee $employee): JsonResponse
     {
-        $entityManager->remove($employee);
-        $entityManager->flush();
+        $this->entityManager->remove($employee);
+        $this->entityManager->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
