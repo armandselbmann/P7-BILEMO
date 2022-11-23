@@ -8,6 +8,7 @@ use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
+use JMS\Serializer\SerializationContext;
 use Psr\Cache\InvalidArgumentException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,7 +18,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -56,7 +56,10 @@ class EmployeeController extends AbstractController
      * @var TagAwareCacheInterface
      */
     private TagAwareCacheInterface $cachePool;
-
+    /**
+     * @var \JMS\Serializer\SerializerInterface
+     */
+    private \JMS\Serializer\SerializerInterface $jmsSerializer;
 
     /**
      * @param SerializerInterface $serializer
@@ -66,6 +69,7 @@ class EmployeeController extends AbstractController
      * @param ValidatorService $validatorService
      * @param PaginationService $paginationService
      * @param TagAwareCacheInterface $cachePool
+     * @param \JMS\Serializer\SerializerInterface $jmsSerializer
      */
     public function __construct(
         SerializerInterface $serializer,
@@ -74,7 +78,8 @@ class EmployeeController extends AbstractController
         UserPasswordHasherInterface $userPasswordHasher,
         ValidatorService $validatorService,
         PaginationService $paginationService,
-        TagAwareCacheInterface $cachePool
+        TagAwareCacheInterface $cachePool,
+        \JMS\Serializer\SerializerInterface $jmsSerializer
     )
     {
         $this->serializer = $serializer;
@@ -84,6 +89,7 @@ class EmployeeController extends AbstractController
         $this->validatorService = $validatorService;
         $this->paginationService = $paginationService;
         $this->cachePool = $cachePool;
+        $this->jmsSerializer = $jmsSerializer;
     }
 
     /**
@@ -99,10 +105,8 @@ class EmployeeController extends AbstractController
     public function listEmployee(Request $request): JsonResponse
     {
         $employeeList = $this->paginationService->paginationList($request, Employee::class);
-        $context = (new ObjectNormalizerContextBuilder())
-            ->withGroups('getEmployeeList')
-            ->toArray();
-        $jsonEmployeeList = $this->serializer->serialize($employeeList, 'json', $context);
+        $context = SerializationContext::create()->setGroups(['getEmployeeList']);
+        $jsonEmployeeList = $this->jmsSerializer->serialize($employeeList, 'json', $context);
         return new JsonResponse($jsonEmployeeList, Response::HTTP_OK, [], true);
     }
 
@@ -116,10 +120,8 @@ class EmployeeController extends AbstractController
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser un(e) employé(e).')]
     public function detailEmployee(Employee $employee): JsonResponse
     {
-        $context = (new ObjectNormalizerContextBuilder())
-            ->withGroups('getEmployee')
-            ->toArray();
-        $jsonEmployee = $this->serializer->serialize($employee, 'json', $context);
+        $context = SerializationContext::create()->setGroups(['getEmployee']);
+        $jsonEmployee = $this->jmsSerializer->serialize($employee, 'json', $context);
         return new JsonResponse($jsonEmployee, Response::HTTP_OK, [], true);
     }
 
@@ -134,18 +136,18 @@ class EmployeeController extends AbstractController
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un(e) employé(e).')]
     public function createEmployee(Request $request): JsonResponse
     {
-        $employee = $this->serializer->deserialize($request->getContent(), Employee::class, 'json');
+        $employee = $this->jmsSerializer->deserialize($request->getContent(), Employee::class, 'json');
         $employee->setCreatedAt(new \DateTime());
         if($this->validatorService->checkValidation($employee)) {
             return new JsonResponse(
-                $this->serializer->serialize($this->validatorService->checkValidation($employee), 'json'),
+                $this->jmsSerializer->serialize($this->validatorService->checkValidation($employee), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
         $user = $employee->getUser();
         if($this->validatorService->checkValidation($user)) {
             return new JsonResponse(
-                $this->serializer->serialize($this->validatorService->checkValidation($user), 'json'),
+                $this->jmsSerializer->serialize($this->validatorService->checkValidation($user), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
         $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
@@ -158,10 +160,8 @@ class EmployeeController extends AbstractController
 
         $this->cachePool->invalidateTags([stripslashes(Employee::class)]);
 
-        $context = (new ObjectNormalizerContextBuilder())
-            ->withGroups('getEmployee')
-            ->toArray();
-        $jsonEmployee = $this->serializer->serialize($employee, 'json', $context);
+        $context = SerializationContext::create()->setGroups(['getEmployee']);
+        $jsonEmployee = $this->jmsSerializer->serialize($employee, 'json', $context);
         $location = $this->urlGenerator->generate('detailEmployee', ['id' => $employee->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonEmployee, Response::HTTP_CREATED, ["Location" => $location], true);
@@ -189,7 +189,7 @@ class EmployeeController extends AbstractController
 
         if($this->validatorService->checkValidation($updatedEmployee)) {
             return new JsonResponse(
-                $this->serializer->serialize($this->validatorService->checkValidation($updatedEmployee), 'json'),
+                $this->jmsSerializer->serialize($this->validatorService->checkValidation($updatedEmployee), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
@@ -198,7 +198,7 @@ class EmployeeController extends AbstractController
 
         if($this->validatorService->checkValidation($updatedUser)) {
             return new JsonResponse(
-                $this->serializer->serialize($this->validatorService->checkValidation($updatedUser), 'json'),
+                $this->jmsSerializer->serialize($this->validatorService->checkValidation($updatedUser), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
@@ -212,10 +212,8 @@ class EmployeeController extends AbstractController
 
         $this->cachePool->invalidateTags([stripslashes(Employee::class)]);
 
-        $context = (new ObjectNormalizerContextBuilder())
-            ->withGroups('getEmployee')
-            ->toArray();
-        $jsonEmployee = $this->serializer->serialize($updatedEmployee, 'json', $context);
+        $context = SerializationContext::create()->setGroups(['getEmployee']);
+        $jsonEmployee = $this->jmsSerializer->serialize($updatedEmployee, 'json', $context);
         $location = $this->urlGenerator->generate('detailEmployee', ['id' => $updatedEmployee->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonEmployee, Response::HTTP_OK, ["Location" => $location], true);
