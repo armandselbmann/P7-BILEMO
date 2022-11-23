@@ -8,9 +8,56 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
-use Symfony\Component\Serializer\Annotation\Groups;
+use JMS\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use Hateoas\Configuration\Annotation as Hateoas;
 
+/**
+ * @Hateoas\Relation(
+ *      "self",
+ *      href = @Hateoas\Route(
+ *          "detailProduct",
+ *          parameters = { "id" = "expr(object.getId())" },
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups = {"getProductList", "getProduct"})
+ * )
+ * @Hateoas\Relation(
+ *      "create",
+ *      href = @Hateoas\Route(
+ *          "createProduct",
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(
+ *          groups = {"getProductList", "getProduct"},
+ *          excludeIf = "expr(not is_granted('ROLE_ADMIN'))"
+ *      )
+ * )
+ * @Hateoas\Relation(
+ *      "update",
+ *      href = @Hateoas\Route(
+ *          "updateProduct",
+ *          parameters = {"id"="expr(object.getId())"},
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(
+ *          groups = {"getProductList", "getProduct"},
+ *          excludeIf = "expr(not is_granted('ROLE_ADMIN'))"
+ *      )
+ * )
+ * @Hateoas\Relation(
+ *      "delete",
+ *      href = @Hateoas\Route(
+ *          "deleteProduct",
+ *          parameters = {"id"="expr(object.getId())"},
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(
+ *          groups = {"getProductList", "getProduct"},
+ *          excludeIf = "expr(not is_granted('ROLE_SUPER_ADMIN'))"
+ *      )
+ * )
+ */
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 #[UniqueEntity('reference', message: "Veuillez saisir une référence différente. Celle-ci correspond déjà à un produit.")]
 class Product

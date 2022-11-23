@@ -8,6 +8,7 @@ use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
+use JMS\Serializer\SerializationContext;
 use Psr\Cache\InvalidArgumentException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,7 +17,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Serializer\Context\Normalizer\ObjectNormalizerContextBuilder;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
@@ -27,10 +27,6 @@ use Symfony\Contracts\Cache\TagAwareCacheInterface;
  */
 class ProductController extends AbstractController
 {
-    /**
-     * @var SerializerInterface
-     */
-    private SerializerInterface $serializer;
     /**
      * @var EntityManagerInterface
      */
@@ -51,6 +47,15 @@ class ProductController extends AbstractController
      * @var TagAwareCacheInterface
      */
     private TagAwareCacheInterface $cachePool;
+    /**
+     * @var SerializerInterface
+     */
+    private SerializerInterface $serializer;
+    /**
+     * @var \JMS\Serializer\SerializerInterface
+     */
+    private \JMS\Serializer\SerializerInterface $jmsSerializer;
+
 
     /**
      * @param SerializerInterface $serializer
@@ -59,6 +64,7 @@ class ProductController extends AbstractController
      * @param ValidatorService $validatorService
      * @param PaginationService $paginationService
      * @param TagAwareCacheInterface $cachePool
+     * @param \JMS\Serializer\SerializerInterface $jmsSerializer
      */
     public function __construct(
         SerializerInterface $serializer,
@@ -66,7 +72,8 @@ class ProductController extends AbstractController
         UrlGeneratorInterface $urlGenerator,
         ValidatorService $validatorService,
         PaginationService $paginationService,
-        TagAwareCacheInterface $cachePool
+        TagAwareCacheInterface $cachePool,
+        \JMS\Serializer\SerializerInterface $jmsSerializer
     )
     {
         $this->serializer = $serializer;
@@ -75,6 +82,7 @@ class ProductController extends AbstractController
         $this->validatorService = $validatorService;
         $this->paginationService = $paginationService;
         $this->cachePool = $cachePool;
+        $this->jmsSerializer = $jmsSerializer;
     }
 
     /**
@@ -88,10 +96,8 @@ class ProductController extends AbstractController
     public function listProduct(Request $request): JsonResponse
     {
         $productList = $this->paginationService->paginationList($request, Product::class);
-        $context = (new ObjectNormalizerContextBuilder())
-            ->withGroups('getProductList')
-            ->toArray();
-        $jsonProductList = $this->serializer->serialize($productList, 'json', $context);
+        $context = SerializationContext::create()->setGroups(['getProductList']);
+        $jsonProductList = $this->jmsSerializer->serialize($productList, 'json', $context);
         return new JsonResponse($jsonProductList, Response::HTTP_OK, [], true);
     }
 
@@ -104,10 +110,8 @@ class ProductController extends AbstractController
     #[Route('/api/products/{id}', name: 'detailProduct', methods: ['GET'])]
     public function detailProduct(Product $product): JsonResponse
     {
-        $context = (new ObjectNormalizerContextBuilder())
-            ->withGroups('getProduct')
-            ->toArray();
-        $jsonProduct = $this->serializer->serialize($product, 'json', $context);
+        $context = SerializationContext::create()->setGroups(['getProduct']);
+        $jsonProduct = $this->jmsSerializer->serialize($product, 'json', $context);
         return new JsonResponse($jsonProduct, Response::HTTP_OK, [], true);
     }
 
@@ -122,12 +126,12 @@ class ProductController extends AbstractController
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un produit.')]
     public function createProduct(Request $request): JsonResponse
     {
-        $product = $this->serializer->deserialize($request->getContent(), Product::class, 'json');
+        $product = $this->jmsSerializer->deserialize($request->getContent(), Product::class, 'json');
         $product->setReleaseDate(new \DateTime());
 
         if($this->validatorService->checkValidation($product)) {
             return new JsonResponse(
-                $this->serializer->serialize($this->validatorService->checkValidation($product), 'json'),
+                $this->jmsSerializer->serialize($this->validatorService->checkValidation($product), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
@@ -136,10 +140,8 @@ class ProductController extends AbstractController
 
         $this->cachePool->invalidateTags([stripslashes(Product::class)]);
 
-        $context = (new ObjectNormalizerContextBuilder())
-            ->withGroups('getProduct')
-            ->toArray();
-        $jsonProduct = $this->serializer->serialize($product, 'json', $context);
+        $context = SerializationContext::create()->setGroups(['getProduct']);
+        $jsonProduct = $this->jmsSerializer->serialize($product, 'json', $context);
         $location = $this->urlGenerator->generate('detailProduct', ['id' => $product->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonProduct, Response::HTTP_CREATED, ["Location" => $location], true);
@@ -162,11 +164,11 @@ class ProductController extends AbstractController
         $updatedProduct = $this->serializer->deserialize($request->getContent(),
             Product::class,
             'json',
-            [AbstractNormalizer::OBJECT_TO_POPULATE => $currentProduct]);
+            [AbstractNormalizer::OBJECT_TO_POPULATE, $currentProduct]);
 
         if($this->validatorService->checkValidation($updatedProduct)) {
             return new JsonResponse(
-                $this->serializer->serialize($this->validatorService->checkValidation($updatedProduct), 'json'),
+                $this->jmsSerializer->serialize($this->validatorService->checkValidation($updatedProduct), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
@@ -175,10 +177,8 @@ class ProductController extends AbstractController
 
         $this->cachePool->invalidateTags([stripslashes(Product::class)]);
 
-        $context = (new ObjectNormalizerContextBuilder())
-            ->withGroups('getProduct')
-            ->toArray();
-        $jsonProduct = $this->serializer->serialize($updatedProduct, 'json', $context);
+        $context = SerializationContext::create()->setGroups(['getProduct']);
+        $jsonProduct = $this->jmsSerializer->serialize($updatedProduct, 'json', $context);
         $location = $this->urlGenerator->generate('detailProduct', ['id' => $updatedProduct->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonProduct, Response::HTTP_OK, ["Location" => $location], true);
