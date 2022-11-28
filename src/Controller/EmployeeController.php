@@ -22,6 +22,8 @@ use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use OpenApi\Annotations as OA;
 
 /**
  * Employee Controller methods
@@ -93,12 +95,40 @@ class EmployeeController extends AbstractController
     }
 
     /**
-     * Get Employee list
+     * List all the BileMo employees --- ACCESS RESTRICTED TO ADMINISTRATORS ---
      *
      * @param Request $request
      * @return JsonResponse
      * @throws NoResultException
      * @throws NonUniqueResultException|InvalidArgumentException
+     *
+     * @OA\Get(
+     *      description="List all the BileMo employees. Access restricted to administrators.",
+     *      tags = {"Employees"},
+     *      @OA\Response(
+     *          response=200,
+     *          description="Successful operation - Returns employee list",
+     *          @OA\JsonContent(
+     *              type="array",
+     *              @OA\Items(ref="#/components/schemas/Employee_light"))
+     *          )
+     *      ),
+     *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *      @OA\Response(response=403, description="Forbidden: access denied"),
+     *      @OA\Response(response=404, description="This page does not exist. Here is the total number of pages: x"),
+     *      @OA\Parameter(
+     *          name="page",
+     *          in="query",
+     *          description="Page you want to consult.",
+     *          @OA\Schema(type="int")
+     *      ),
+     *      @OA\Parameter(
+     *          name="limit",
+     *          in="query",
+     *          description="The number of elements to be retrieved.",
+     *          @OA\Schema(type="int")
+     *      )
+     * )
      */
     #[Route('/api/employees', name: 'listEmployee', methods: ['GET'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser la liste des employé(e)s.')]
@@ -111,10 +141,27 @@ class EmployeeController extends AbstractController
     }
 
     /**
-     * Get Employee detail
+     * List the characteristics of the specified employee --- ACCESS RESTRICTED TO ADMINISTRATORS ---
      *
      * @param Employee $employee
      * @return JsonResponse
+     *
+     * @OA\Get(
+     *     description="List the characteristics of the specified employee. Access restricted to administrators.",
+     *     tags = {"Employees"},
+     *     @OA\Response(
+     *          response=200,
+     *          description="Returns employee detail",
+     *          @OA\JsonContent(
+     *              type="array",
+     *              @OA\Items(ref="#/components/schemas/Employee"))
+     *          )
+     *      ),
+     *      @OA\Response(response=400, description="Bad Request: This method is not allowed for this route"),
+     *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *      @OA\Response(response=403, description="Forbidden: access denied"),
+     *      @OA\Response(response=404, description="Object not found: Invalid route or resource ID")
+     * )
      */
     #[Route('/api/employees/{id}', name: 'detailEmployee', methods: ['GET'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour visualiser un(e) employé(e).')]
@@ -126,11 +173,32 @@ class EmployeeController extends AbstractController
     }
 
     /**
-     * Create an Employee
+     * Create a new employee --- ACCESS RESTRICTED TO ADMINISTRATORS ---
      *
      * @param Request $request
      * @return JsonResponse
      * @throws InvalidArgumentException
+     *
+     * @OA\Post(
+     *     description="Create a new employee. Access restricted to administrators.",
+     *     tags = {"Employees"},
+     *     @OA\RequestBody(
+     *          description="Employee that needs to be added.",
+     *          required=true,
+     *          @OA\JsonContent(ref="#/components/schemas/Employee_post_put"),
+     *     ),
+     *     @OA\Response(
+     *          response=201,
+     *          description="Created - Returns employee details",
+     *          @OA\JsonContent(
+     *              type="array",
+     *              @OA\Items(ref="#/components/schemas/Employee"))
+     *          )
+     *      ),
+     *      @OA\Response(response="400", description="Bad Request: Invalid content"),
+     *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *      @OA\Response(response="403", description="Forbidden: You are not allowed to access to this page"),
+     * )
      */
     #[Route('/api/employees', name: 'createEmployee', methods: ['POST'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un(e) employé(e).')]
@@ -153,6 +221,7 @@ class EmployeeController extends AbstractController
         $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
         $user->setPassword($passwordHashed);
         $user->setRoles(['ROLE_ADMIN']);
+        $user->setEmployees($employee);
 
         $this->entityManager->persist($user);
         $this->entityManager->persist($employee);
@@ -168,12 +237,33 @@ class EmployeeController extends AbstractController
     }
 
     /**
-     * Update an Employee
+     * Update an Employee --- ACCESS RESTRICTED TO ADMINISTRATORS ---
      *
      * @param Request $request
      * @param Employee $currentEmployee
      * @return JsonResponse
      * @throws InvalidArgumentException
+     *
+     * @OA\Put(
+     *     description="Update a Employee. This operation does not allow to modify the images linked to a product. Access restricted to administrators.",
+     *     tags = {"Employees"},
+     *     @OA\RequestBody(
+     *          description="Properties of an employee that can be update.",
+     *          required=true,
+     *          @OA\JsonContent(ref="#/components/schemas/Employee_post_put"),
+     *     ),
+     *     @OA\Response(
+     *          response=200,
+     *          description="Successful operation - Returns the updated employee",
+     *          @OA\JsonContent(
+     *              type="array",
+     *              @OA\Items(ref="#/components/schemas/Employee"))
+     *          )
+     *      ),
+     *      @OA\Response(response="400", description="Bad Request: This method is not allowed for this route OR Could not decode JSON, syntax error - malformed JSON. OR The JSON sent contains invalid data."),
+     *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *      @OA\Response(response="403", description="Forbidden: You are not allowed to access to this page"),
+     * )
      */
     #[Route('/api/employees/{id}', name: 'updateEmployee', methods: ['PUT'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un(e) employé(e).')]
@@ -220,11 +310,21 @@ class EmployeeController extends AbstractController
     }
 
     /**
-     * Delete an Employee
+     * Delete an Employee --- ACCESS RESTRICTED TO ADMINISTRATORS ---
      *
      * @param Employee $employee
      * @return JsonResponse
      * @throws InvalidArgumentException
+     *
+     * @OA\Delete(
+     *     description="Delete the specified employee. Access restricted to administrators.",
+     *     tags = {"Employees"},
+     *     @OA\Response(response=204, description="Successful operation: No-Content"),
+     *     @OA\Response(response="400", description="Bad Request: This method is not allowed for this route"),
+     *     @OA\Response(response="401", description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *     @OA\Response(response="403", description="Forbidden: You are not allowed to access to this page"),
+     *     @OA\Response(response="404", description="Object not found: Invalid route or resource ID")
+     * )
      */
     #[Route('/api/employees/{id}', name: 'deleteEmployee', methods: ['DELETE'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un(e) employé(e).')]

@@ -56,7 +56,7 @@ class CustomerUser
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer'])]
+    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un nom.")]
     #[Assert\Length(
         min: 3,
@@ -66,7 +66,7 @@ class CustomerUser
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un prénom.")]
     #[Assert\Length(
         min: 3,
@@ -76,12 +76,12 @@ class CustomerUser
     private ?string $firstName = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer'])]
+    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer', 'postPutCustomerUser'])]
     #[Assert\Email(message: 'Cet email {{ value }} n\'est pas valide')]
     private ?string $email = null;
 
     #[ORM\Column(length: 10)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un code postal.")]
     #[Assert\Length(
         min: 5,
@@ -89,12 +89,12 @@ class CustomerUser
     private ?string $postalCode = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir une adresse.")]
     private ?string $adress = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir une ville.")]
     #[Assert\Length(
         min: 3,
@@ -102,7 +102,7 @@ class CustomerUser
     private ?string $city = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un pays.")]
     #[Assert\Length(
         min: 3,
@@ -110,7 +110,7 @@ class CustomerUser
     private ?string $country = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un numéro de téléphone.")]
     #[Assert\Length(
         min: 4,

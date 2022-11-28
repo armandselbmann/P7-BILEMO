@@ -70,12 +70,12 @@ class Customer
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerList', 'getCustomer', 'getCustomerUserList', 'getCustomerUser'])]
+    #[Groups(['getCustomerList', 'getCustomer', 'getCustomerUserList', 'getCustomerUser', 'postPutCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir un nom de société.")]
     private ?string $company = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerList', 'getCustomer'])]
+    #[Groups(['getCustomerList', 'getCustomer', 'postPutCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir un nom.")]
     #[Assert\Length(
         min: 3,
@@ -85,7 +85,7 @@ class Customer
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerList', 'getCustomer'])]
+    #[Groups(['getCustomerList', 'getCustomer', 'postPutCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir un prénom.")]
     #[Assert\Length(
         min: 3,
@@ -95,7 +95,7 @@ class Customer
     private ?string $firstName = null;
 
     #[ORM\Column(length: 10)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomer', 'postPutCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir un code postal.")]
     #[Assert\Length(
         min: 5,
@@ -103,12 +103,12 @@ class Customer
     private ?string $postalCode = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomer', 'postPutCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir une adresse.")]
     private ?string $adress = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomer', 'postPutCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir une ville.")]
     #[Assert\Length(
         min: 3,
@@ -116,7 +116,7 @@ class Customer
     private ?string $city = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomer', 'postPutCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir un pays.")]
     #[Assert\Length(
         min: 3,
@@ -124,7 +124,7 @@ class Customer
     private ?string $country = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomerList', 'getCustomer'])]
+    #[Groups(['getCustomerList', 'getCustomer', 'postPutCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir un numéro de téléphone.")]
     #[Assert\Length(
         min: 4,
@@ -134,23 +134,23 @@ class Customer
     private ?string $phone = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomer', 'postPutCustomer'])]
     private ?string $TVANumber = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomer', 'postPutCustomer'])]
     private ?string $SIRET = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomer', 'postPutCustomer'])]
     private ?\DateTimeInterface $createdAt = null;
 
     #[ORM\OneToMany(mappedBy: 'customers', targetEntity: CustomerUser::class, fetch: 'EAGER', orphanRemoval: true)]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomer', 'postPutCustomer'])]
     private Collection $customerUsers;
 
     #[ORM\OneToOne(mappedBy: 'customers', cascade: ['persist', 'remove'], fetch: 'EAGER')]
-    #[Groups(['getCustomer'])]
+    #[Groups(['getCustomer', 'postPutCustomer'])]
     #[Assert\NotBlank(message: "Vous devez saisir une adresse mail et un mot de passe.")]
     private ?User $user = null;
 

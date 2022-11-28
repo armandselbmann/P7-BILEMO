@@ -20,7 +20,8 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
-
+use Nelmio\ApiDocBundle\Annotation\Model;
+use OpenApi\Annotations as OA;
 
 /**
  * Product Controller methods
@@ -86,11 +87,40 @@ class ProductController extends AbstractController
     }
 
     /**
-     * Get Product list
+     * List all the BileMo products.
      *
      * @param Request $request
      * @return JsonResponse
-     * @throws NonUniqueResultException|InvalidArgumentException|NoResultException
+     * @throws InvalidArgumentException
+     * @throws NoResultException
+     * @throws NonUniqueResultException
+     *
+     * @OA\Get(
+     *      description="List all the BileMo products.",
+     *      tags = {"Products"},
+     *      @OA\Response(
+     *          response=200,
+     *          description="Successful operation - Returns product list",
+     *          @OA\JsonContent(
+     *              type="array",
+     *              @OA\Items(ref="#/components/schemas/Product_light"))
+     *          )
+     *      ),
+     *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *      @OA\Response(response=404, description="This page does not exist. Here is the total number of pages: x"),
+     *      @OA\Parameter(
+     *          name="page",
+     *          in="query",
+     *          description="Page you want to consult.",
+     *          @OA\Schema(type="int")
+     *      ),
+     *      @OA\Parameter(
+     *          name="limit",
+     *          in="query",
+     *          description="The number of elements to be retrieved.",
+     *          @OA\Schema(type="int")
+     *      )
+     * )
      */
     #[Route('/api/products', name: 'listProduct', methods: ['GET'])]
     public function listProduct(Request $request): JsonResponse
@@ -102,10 +132,26 @@ class ProductController extends AbstractController
     }
 
     /**
-     * Get Product detail
+     * List the characteristics of the specified product.
      *
      * @param Product $product
      * @return JsonResponse
+     *
+     * @OA\Get(
+     *     description="List the characteristics of the specified product.",
+     *     tags = {"Products"},
+     *     @OA\Response(
+     *          response=200,
+     *          description="Successful operation - Returns product details",
+     *          @OA\JsonContent(
+     *              type="array",
+     *              @OA\Items(ref="#/components/schemas/Product"))
+     *          )
+     *      ),
+     *      @OA\Response(response=400, description="Bad Request: This method is not allowed for this route"),
+     *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *      @OA\Response(response=404, description="Object not found: Invalid route or resource ID")
+     * )
      */
     #[Route('/api/products/{id}', name: 'detailProduct', methods: ['GET'])]
     public function detailProduct(Product $product): JsonResponse
@@ -116,11 +162,32 @@ class ProductController extends AbstractController
     }
 
     /**
-     * Create a Product
+     * Create a new product --- ACCESS RESTRICTED TO EMPLOYEES AND ADMINISTRATORS ---
      *
      * @param Request $request
      * @return JsonResponse
      * @throws InvalidArgumentException
+     *
+     * @OA\Post(
+     *     description="Create a new product. Access restricted to employees and administrators.",
+     *     tags = {"Products"},
+     *     @OA\RequestBody(
+     *          description="Product that needs to be added to the catalog.",
+     *          required=true,
+     *          @OA\JsonContent(ref="#/components/schemas/Product_post_put"),
+     *     ),
+     *     @OA\Response(
+     *          response=201,
+     *          description="Created - Returns product details",
+     *          @OA\JsonContent(
+     *              type="array",
+     *              @OA\Items(ref="#/components/schemas/Product"))
+     *          )
+     *      ),
+     *      @OA\Response(response="400", description="Bad Request: Invalid content"),
+     *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *      @OA\Response(response="403", description="Forbidden: You are not allowed to access to this page"),
+     * )
      */
     #[Route('/api/products', name: 'createProduct', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un produit.')]
@@ -148,7 +215,7 @@ class ProductController extends AbstractController
     }
 
     /**
-     * Update a Product
+     * Update a Product --- ACCESS RESTRICTED TO EMPLOYEES AND ADMINISTRATORS ---
      *
      * This method does not allow to modify the images linked to a product.
      *
@@ -156,6 +223,27 @@ class ProductController extends AbstractController
      * @param Product $currentProduct
      * @return JsonResponse
      * @throws InvalidArgumentException
+     *
+     * @OA\Put(
+     *     description="Update a product. This operation does not allow to modify the images linked to a product. Access restricted to employees and administrators.",
+     *     tags = {"Products"},
+     *     @OA\RequestBody(
+     *          description="Properties of the product object that can be update.",
+     *          required=true,
+     *          @OA\JsonContent(ref="#/components/schemas/Product_post_put"),
+     *     ),
+     *     @OA\Response(
+     *          response=200,
+     *          description="Successful operation - Returns the updated product",
+     *          @OA\JsonContent(
+     *              type="array",
+     *              @OA\Items(ref="#/components/schemas/Product"))
+     *          )
+     *      ),
+     *      @OA\Response(response="400", description="Bad Request: This method is not allowed for this route OR Could not decode JSON, syntax error - malformed JSON. OR The JSON sent contains invalid data."),
+     *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *      @OA\Response(response="403", description="Forbidden: You are not allowed to access to this page"),
+     * )
      */
     #[Route('/api/products/{id}', name: 'updateProduct', methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour modifier un produit.')]
@@ -164,7 +252,7 @@ class ProductController extends AbstractController
         $updatedProduct = $this->serializer->deserialize($request->getContent(),
             Product::class,
             'json',
-            [AbstractNormalizer::OBJECT_TO_POPULATE, $currentProduct]);
+            [AbstractNormalizer::OBJECT_TO_POPULATE => $currentProduct]);
 
         if($this->validatorService->checkValidation($updatedProduct)) {
             return new JsonResponse(
@@ -185,11 +273,21 @@ class ProductController extends AbstractController
     }
 
     /**
-     * Delete a Product
+     * Delete the specified product --- ACCESS RESTRICTED TO ADMINISTRATORS ---
      *
      * @param Product $product
      * @return JsonResponse
      * @throws InvalidArgumentException
+     *
+     * @OA\Delete(
+     *     description="Delete the specified product. Access restricted to administrators.",
+     *     tags = {"Products"},
+     *     @OA\Response(response=204, description="Successful operation: No-Content"),
+     *     @OA\Response(response="400", description="Bad Request: This method is not allowed for this route"),
+     *     @OA\Response(response="401", description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     *     @OA\Response(response="403", description="Forbidden: You are not allowed to access to this page"),
+     *     @OA\Response(response="404", description="Object not found: Invalid route or resource ID")
+     * )
      */
     #[Route('/api/products/{id}', name: 'deleteProduct', methods: ['DELETE'])]
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un produit.')]

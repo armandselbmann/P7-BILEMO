@@ -1,0 +1,78 @@
+nelmio_api_doc:
+    models:
+        names:
+        - { alias: Product, type: App\Entity\Product, groups: [ getProduct ] }
+        - { alias: Product_light, type: App\Entity\Product, groups: [ getProductList ] }
+        - { alias: Product_post_put, type: App\Entity\Product, groups: [ postPutProduct ] }
+        - { alias: Customer, type: App\Entity\Customer, groups: [ getCustomer ] }
+        - { alias: Customer_light, type: App\Entity\Customer, groups: [ getCustomerList ] }
+        - { alias: Customer_post_put, type: App\Entity\Customer, groups: [ postPutCustomer ] }
+        - { alias: Employee, type: App\Entity\Employee, groups: [ getEmployee ] }
+        - { alias: Employee_light, type: App\Entity\Employee, groups: [ getEmployeeList ] }
+        - { alias: Employee_post_put, type: App\Entity\Employee, groups: [ postPutEmployee ] }
+        - { alias: CustomerUser, type: App\Entity\CustomerUser, groups: [ getCustomerUser ] }
+        - { alias: CustomerUser_light, type: App\Entity\CustomerUser, groups: [ getCustomerUserList ] }
+        - { alias: CustomerUser_post_put, type: App\Entity\CustomerUser, groups: [ postPutCustomerUser ] }
+
+    documentation:
+        info:
+            title: BILEMO
+            description: An API allowing access to a high-end smartphone catalog. Access is restricted to customers, employees and administrators of Bilemo, by JWT authentication.
+            version: 1.0.0
+        paths:
+            /api/login_check:
+                post:
+                    operationId: postCredentialsItem
+                    tags:
+                        - Token
+                    summary: Obtain the JWT token to log in.
+                    requestBody:
+                        description: Obtain a new token.
+                        required: true
+                        content:
+                            application/json:
+                                schema:
+                                    $ref: '#/components/schemas/Credentials'
+                                example:
+                                    username: customer1@gmail.com
+                                    password: password1
+                    responses:
+                        '200':
+                            description: Get the token.
+                            content:
+                                application/json:
+                                    schema:
+                                        $ref: '#/components/schemas/Token'
+                        '401':
+                            description: Invalid Credentials.
+        components:
+            schemas:
+                Token:
+                    type: object
+                    properties:
+                        token:
+                            type: string
+                            readOnly: true
+                Credentials:
+                    type: object
+                    required:
+                        - username
+                        - password
+                    properties:
+                        username:
+                            type: string
+                            description: Username required for token request
+                        password:
+                            type: string
+                            description: Password required for token request
+            securitySchemes:
+                bearerAuth:
+                    description: You must type "bearer" and a space, before pasting the token.
+                    type: apiKey
+                    in: header
+                    name: Authorization # or another header name
+        security:
+            - bearerAuth: []
+    areas: # to filter documented areas
+        path_patterns:
+            - ^/api(?!/doc$) # Accepts routes under /api except /api/doc
