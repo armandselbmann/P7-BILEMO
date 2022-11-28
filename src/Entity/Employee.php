@@ -68,7 +68,7 @@ class Employee
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getEmployeeList', 'getEmployee'])]
+    #[Groups(['getEmployeeList', 'getEmployee', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir un nom.")]
     #[Assert\Length(
         min: 3,
@@ -78,7 +78,7 @@ class Employee
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getEmployeeList', 'getEmployee'])]
+    #[Groups(['getEmployeeList', 'getEmployee', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir un prénom.")]
     #[Assert\Length(
         min: 3,
@@ -88,7 +88,7 @@ class Employee
     private ?string $firstName = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getEmployee'])]
+    #[Groups(['getEmployee', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir un numéro de téléphone.")]
     #[Assert\Length(
         min: 4,
@@ -102,7 +102,7 @@ class Employee
     private ?\DateTimeInterface $createdAt = null;
 
     #[ORM\OneToOne(mappedBy: 'employees', cascade: ['persist', 'remove'], fetch: 'EAGER')]
-    #[Groups(['getEmployee'])]
+    #[Groups(['getEmployee', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir une adresse mail et un mot de passe.")]
     private ?User $user = null;
 

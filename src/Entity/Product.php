@@ -11,6 +11,7 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use JMS\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use Hateoas\Configuration\Annotation as Hateoas;
+use OpenApi\Attributes as OA;
 
 /**
  * @Hateoas\Relation(
@@ -69,126 +70,134 @@ class Product
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getProductList', 'getProduct'])]
+    #[Groups(['getProductList', 'getProduct', 'postPutProduct'])]
+    #[OA\Property(description: 'Smartphone reference. It is unique and does not match any other smartphone.')]
     #[Assert\NotBlank(message: "Vous devez saisir une référence.")]
     private ?string $reference = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[OA\Property(description: 'Release date of the product.')]
     #[Groups(['getProductList', 'getProduct'])]
     private ?\DateTimeInterface $releaseDate = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getProductList', 'getProduct'])]
+    #[Groups(['getProductList', 'getProduct', 'postPutProduct'])]
+    #[OA\Property(description: 'Serial number.')]
     #[Assert\NotBlank(message: "Vous devez saisir un numéro de série.")]
     private ?string $series = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getProductList', 'getProduct'])]
+    #[Groups(['getProductList', 'getProduct', 'postPutProduct'])]
+    #[OA\Property(description: 'Smartphone name.')]
     #[Assert\NotBlank(message: "Vous devez saisir un nom.")]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    #[Groups(['getProductList', 'getProduct'])]
+    #[Groups(['getProductList', 'getProduct', 'postPutProduct'])]
     private ?string $description = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getProductList', 'getProduct'])]
+    #[Groups(['getProductList', 'getProduct', 'postPutProduct'])]
+    #[OA\Property(description: 'Smartphone maker.')]
     #[Assert\NotBlank(message: "Vous devez saisir un fabricant.")]
     private ?string $maker = null;
 
     #[ORM\Column]
-    #[Groups(['getProductList', 'getProduct'])]
+    #[Groups(['getProductList', 'getProduct', 'postPutProduct'])]
+    #[OA\Property(description: 'Smartphone price.')]
     #[Assert\NotBlank(message: "Vous devez saisir un prix.")]
     private ?int $price = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
+    #[OA\Property(description: 'Smartphone color.')]
     #[Assert\NotBlank(message: "Vous devez saisir une couleur.")]
     private ?string $color = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
+    #[OA\Property(description: 'Smartphone operating systeme.')]
     #[Assert\NotBlank(message: "Vous devez saisir le système d'exploitation.")]
     private ?string $platform = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $network = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $connector = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $battery = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $RAM = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $ROM = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $brandCPU = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $speedCPU = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?int $coresCPU = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $mainCAM = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $subCam = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $displayType = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?string $displaySize = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?bool $doubleSIM = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?bool $cardReader = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?bool $foldable = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?bool $eSIM = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?int $width = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?int $height = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?int $depth = null;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['getProduct'])]
+    #[Groups(['getProduct', 'postPutProduct'])]
     private ?int $weight = null;
 
     #[ORM\OneToMany(mappedBy: 'products', targetEntity: Image::class, fetch: 'EAGER', orphanRemoval: true)]

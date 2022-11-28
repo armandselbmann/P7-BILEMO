@@ -7,7 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Serializer\Annotation\Groups;
+use JMS\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
@@ -23,7 +23,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * @var string|null
      */
     #[ORM\Column(length: 180, unique: true)]
-    #[Groups(['getCustomer', 'getEmployee'])]
+    #[Groups(['getCustomer', 'getEmployee', 'postPutCustomer', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir une adresse mail.")]
     #[Assert\Email(message: 'Cet email {{ value }} n\'est pas valide')]
     private ?string $email = null;
@@ -39,6 +39,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * @var string|null
      */
     #[ORM\Column]
+    #[Groups(['postPutCustomer', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir un mot de passe.")]
     #[Assert\Length(
         min: 4,
