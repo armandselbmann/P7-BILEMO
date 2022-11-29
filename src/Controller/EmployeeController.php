@@ -3,12 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\Employee;
+use App\Services\ExistingObjectConstructor;
 use App\Services\PaginationService;
 use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
 use JMS\Serializer\SerializationContext;
+use JMS\Serializer\SerializerInterface;
 use Psr\Cache\InvalidArgumentException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,9 +20,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use OpenApi\Annotations as OA;
@@ -30,10 +29,6 @@ use OpenApi\Annotations as OA;
  */
 class EmployeeController extends AbstractController
 {
-    /**
-     * @var SerializerInterface
-     */
-    private SerializerInterface $serializer;
     /**
      * @var EntityManagerInterface
      */
@@ -59,39 +54,43 @@ class EmployeeController extends AbstractController
      */
     private TagAwareCacheInterface $cachePool;
     /**
-     * @var \JMS\Serializer\SerializerInterface
+     * @var SerializerInterface
      */
-    private \JMS\Serializer\SerializerInterface $jmsSerializer;
+    private SerializerInterface $serializer;
+    /**
+     * @var ExistingObjectConstructor
+     */
+    private ExistingObjectConstructor $objectConstructor;
 
     /**
-     * @param SerializerInterface $serializer
      * @param EntityManagerInterface $entityManager
      * @param UrlGeneratorInterface $urlGenerator
      * @param UserPasswordHasherInterface $userPasswordHasher
      * @param ValidatorService $validatorService
      * @param PaginationService $paginationService
      * @param TagAwareCacheInterface $cachePool
-     * @param \JMS\Serializer\SerializerInterface $jmsSerializer
+     * @param SerializerInterface $serializer
+     * @param ExistingObjectConstructor $objectConstructor
      */
     public function __construct(
-        SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
         UserPasswordHasherInterface $userPasswordHasher,
         ValidatorService $validatorService,
         PaginationService $paginationService,
         TagAwareCacheInterface $cachePool,
-        \JMS\Serializer\SerializerInterface $jmsSerializer
+        SerializerInterface $serializer,
+        ExistingObjectConstructor $objectConstructor
     )
     {
-        $this->serializer = $serializer;
         $this->entityManager = $entityManager;
         $this->urlGenerator = $urlGenerator;
         $this->userPasswordHasher = $userPasswordHasher;
         $this->validatorService = $validatorService;
         $this->paginationService = $paginationService;
         $this->cachePool = $cachePool;
-        $this->jmsSerializer = $jmsSerializer;
+        $this->serializer = $serializer;
+        $this->objectConstructor = $objectConstructor;
     }
 
     /**
@@ -136,7 +135,7 @@ class EmployeeController extends AbstractController
     {
         $employeeList = $this->paginationService->paginationList($request, Employee::class);
         $context = SerializationContext::create()->setGroups(['getEmployeeList']);
-        $jsonEmployeeList = $this->jmsSerializer->serialize($employeeList, 'json', $context);
+        $jsonEmployeeList = $this->serializer->serialize($employeeList, 'json', $context);
         return new JsonResponse($jsonEmployeeList, Response::HTTP_OK, [], true);
     }
 
@@ -168,7 +167,7 @@ class EmployeeController extends AbstractController
     public function detailEmployee(Employee $employee): JsonResponse
     {
         $context = SerializationContext::create()->setGroups(['getEmployee']);
-        $jsonEmployee = $this->jmsSerializer->serialize($employee, 'json', $context);
+        $jsonEmployee = $this->serializer->serialize($employee, 'json', $context);
         return new JsonResponse($jsonEmployee, Response::HTTP_OK, [], true);
     }
 
@@ -204,18 +203,18 @@ class EmployeeController extends AbstractController
     #[IsGranted('ROLE_SUPER_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un(e) employé(e).')]
     public function createEmployee(Request $request): JsonResponse
     {
-        $employee = $this->jmsSerializer->deserialize($request->getContent(), Employee::class, 'json');
+        $employee = $this->serializer->deserialize($request->getContent(), Employee::class, 'json');
         $employee->setCreatedAt(new \DateTime());
         if($this->validatorService->checkValidation($employee)) {
             return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($employee), 'json'),
+                $this->serializer->serialize($this->validatorService->checkValidation($employee), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
         $user = $employee->getUser();
         if($this->validatorService->checkValidation($user)) {
             return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($user), 'json'),
+                $this->serializer->serialize($this->validatorService->checkValidation($user), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
         $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
@@ -223,14 +222,12 @@ class EmployeeController extends AbstractController
         $user->setRoles(['ROLE_ADMIN']);
         $user->setEmployees($employee);
 
-        $this->entityManager->persist($user);
-        $this->entityManager->persist($employee);
         $this->entityManager->flush();
 
         $this->cachePool->invalidateTags([stripslashes(Employee::class)]);
 
         $context = SerializationContext::create()->setGroups(['getEmployee']);
-        $jsonEmployee = $this->jmsSerializer->serialize($employee, 'json', $context);
+        $jsonEmployee = $this->serializer->serialize($employee, 'json', $context);
         $location = $this->urlGenerator->generate('detailEmployee', ['id' => $employee->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonEmployee, Response::HTTP_CREATED, ["Location" => $location], true);
@@ -260,9 +257,9 @@ class EmployeeController extends AbstractController
      *              @OA\Items(ref="#/components/schemas/Employee"))
      *          )
      *      ),
-     *      @OA\Response(response="400", description="Bad Request: This method is not allowed for this route OR Could not decode JSON, syntax error - malformed JSON. OR The JSON sent contains invalid data."),
-     *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
-     *      @OA\Response(response="403", description="Forbidden: You are not allowed to access to this page"),
+     * @OA\Response(response="400", description="Bad Request: This method is not allowed for this route OR Could not decode JSON, syntax error - malformed JSON. OR The JSON sent contains invalid data."),
+     * @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
+     * @OA\Response(response="403", description="Forbidden: You are not allowed to access to this page"),
      * )
      */
     #[Route('/api/employees/{id}', name: 'updateEmployee', methods: ['PUT'])]
@@ -272,39 +269,40 @@ class EmployeeController extends AbstractController
         $currentUser = $currentEmployee->getUser();
         $currentPassword = $currentUser->getPassword();
 
-        $updatedEmployee = $this->serializer->deserialize($request->getContent(),
-            Employee::class,
-            'json',
-            [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentEmployee, AbstractObjectNormalizer::DEEP_OBJECT_TO_POPULATE => true]);
+        $newEmployee = $this->serializer->deserialize($request->getContent(), Employee::class, 'json');
+        $currentEmployee = $this->objectConstructor->employeeConstructor($newEmployee, $currentEmployee);
 
-        if($this->validatorService->checkValidation($updatedEmployee)) {
+        if($this->validatorService->checkValidation($currentEmployee)) {
             return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($updatedEmployee), 'json'),
+                $this->serializer->serialize($this->validatorService->checkValidation($currentEmployee), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
-        $updatedUser = $updatedEmployee->getUser();
-        $updatedPassword = $updatedUser->getPassword();
-
-        if($this->validatorService->checkValidation($updatedUser)) {
-            return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($updatedUser), 'json'),
-                Response::HTTP_BAD_REQUEST, [], true);
+        if ($newEmployee->getUser()){
+            if ($newEmployee->getUser()->getEmail()) {
+                $currentUser->setEmail($newEmployee->getUser()->getEmail());
+            }
+            if ($newEmployee->getUser()->getPassword()) {
+                $newPassword = $newEmployee->getUser()->getPassword();
+                if($this->validatorService->checkValidation($currentUser)) {
+                    return new JsonResponse(
+                        $this->serializer->serialize($this->validatorService->checkValidation($currentUser), 'json'),
+                        Response::HTTP_BAD_REQUEST, [], true);
+                }
+                if($currentPassword != $newPassword) {
+                    $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($currentUser, $newPassword);
+                    $currentUser->setPassword($updatedPasswordHashed);
+                }
+            }
         }
 
-        if($currentPassword != $updatedPassword) {
-            $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
-            $updatedUser->setPassword($updatedPasswordHashed);
-        }
-
-        $this->entityManager->persist($updatedEmployee);
         $this->entityManager->flush();
 
         $this->cachePool->invalidateTags([stripslashes(Employee::class)]);
 
         $context = SerializationContext::create()->setGroups(['getEmployee']);
-        $jsonEmployee = $this->jmsSerializer->serialize($updatedEmployee, 'json', $context);
-        $location = $this->urlGenerator->generate('detailEmployee', ['id' => $updatedEmployee->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $jsonEmployee = $this->serializer->serialize($currentEmployee, 'json', $context);
+        $location = $this->urlGenerator->generate('detailEmployee', ['id' => $currentEmployee->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonEmployee, Response::HTTP_OK, ["Location" => $location], true);
     }

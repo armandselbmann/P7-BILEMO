@@ -3,12 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\Customer;
+use App\Services\ExistingObjectConstructor;
 use App\Services\PaginationService;
 use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
 use JMS\Serializer\SerializationContext;
+use JMS\Serializer\SerializerInterface;
 use Psr\Cache\InvalidArgumentException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,9 +20,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use OpenApi\Annotations as OA;
@@ -60,9 +59,9 @@ class CustomerController extends AbstractController
      */
     private TagAwareCacheInterface $cachePool;
     /**
-     * @var \JMS\Serializer\SerializerInterface
+     * @var ExistingObjectConstructor
      */
-    private \JMS\Serializer\SerializerInterface $jmsSerializer;
+    private ExistingObjectConstructor $objectConstructor;
 
     /**
      * @param SerializerInterface $serializer
@@ -72,7 +71,7 @@ class CustomerController extends AbstractController
      * @param ValidatorService $validatorService
      * @param PaginationService $paginationService
      * @param TagAwareCacheInterface $cachePool
-     * @param \JMS\Serializer\SerializerInterface $jmsSerializer
+     * @param ExistingObjectConstructor $objectConstructor
      */
     public function __construct(
         SerializerInterface $serializer,
@@ -82,7 +81,7 @@ class CustomerController extends AbstractController
         ValidatorService $validatorService,
         PaginationService $paginationService,
         TagAwareCacheInterface $cachePool,
-        \JMS\Serializer\SerializerInterface $jmsSerializer
+        ExistingObjectConstructor $objectConstructor
     )
     {
         $this->serializer = $serializer;
@@ -92,7 +91,7 @@ class CustomerController extends AbstractController
         $this->validatorService = $validatorService;
         $this->paginationService = $paginationService;
         $this->cachePool = $cachePool;
-        $this->jmsSerializer = $jmsSerializer;
+        $this->objectConstructor = $objectConstructor;
     }
 
     /**
@@ -137,7 +136,7 @@ class CustomerController extends AbstractController
     {
         $customerList = $this->paginationService->paginationList($request, Customer::class);
         $context = SerializationContext::create()->setGroups(['getCustomerList']);
-        $jsonCustomerList = $this->jmsSerializer->serialize($customerList, 'json', $context);
+        $jsonCustomerList = $this->serializer->serialize($customerList, 'json', $context);
         return new JsonResponse($jsonCustomerList, Response::HTTP_OK, [], true);
     }
 
@@ -169,7 +168,7 @@ class CustomerController extends AbstractController
     public function detailCustomer(Customer $customer): JsonResponse
     {
         $context = SerializationContext::create()->setGroups(['getCustomer']);
-        $jsonCustomer = $this->jmsSerializer->serialize($customer, 'json', $context);
+        $jsonCustomer = $this->serializer->serialize($customer, 'json', $context);
         return new JsonResponse($jsonCustomer, Response::HTTP_OK, [], true);
     }
 
@@ -205,18 +204,18 @@ class CustomerController extends AbstractController
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un client.')]
     public function createCustomer(Request $request): JsonResponse
     {
-        $customer = $this->jmsSerializer->deserialize($request->getContent(), Customer::class, 'json');
+        $customer = $this->serializer->deserialize($request->getContent(), Customer::class, 'json');
         $customer->setCreatedAt(new \DateTime());
         if($this->validatorService->checkValidation($customer)) {
             return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($customer), 'json'),
+                $this->serializer->serialize($this->validatorService->checkValidation($customer), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
         $user = $customer->getUser();
         if($this->validatorService->checkValidation($user)) {
             return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($user), 'json'),
+                $this->serializer->serialize($this->validatorService->checkValidation($user), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
         $passwordHashed = $this->userPasswordHasher->hashPassword($user, $user->getPassword());
@@ -231,7 +230,7 @@ class CustomerController extends AbstractController
         $this->cachePool->invalidateTags([stripslashes(Customer::class)]);
 
         $context = SerializationContext::create()->setGroups(['getCustomer']);
-        $jsonCustomer = $this->jmsSerializer->serialize($customer, 'json', $context);
+        $jsonCustomer = $this->serializer->serialize($customer, 'json', $context);
         $location = $this->urlGenerator->generate('detailCustomer', ['id' => $customer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonCustomer, Response::HTTP_CREATED, ["Location" => $location], true);
@@ -273,36 +272,40 @@ class CustomerController extends AbstractController
         $currentUser = $currentCustomer->getUser();
         $currentPassword = $currentUser->getPassword();
 
-        $updatedCustomer = $this->serializer->deserialize($request->getContent(),
-            Customer::class,
-            'json',
-            [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentCustomer, AbstractObjectNormalizer::DEEP_OBJECT_TO_POPULATE => true]);
-        if($this->validatorService->checkValidation($updatedCustomer)) {
+        $newCustomer = $this->serializer->deserialize($request->getContent(), Customer::class, 'json');
+        $currentCustomer = $this->objectConstructor->customerConstructor($newCustomer, $currentCustomer);
+
+        if($this->validatorService->checkValidation($currentCustomer)) {
             return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($updatedCustomer), 'json'),
+                $this->serializer->serialize($this->validatorService->checkValidation($currentCustomer), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
-        $updatedUser = $updatedCustomer->getUser();
-        $updatedPassword = $updatedUser->getPassword();
-        if($this->validatorService->checkValidation($updatedUser)) {
-            return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($updatedUser), 'json'),
-                Response::HTTP_BAD_REQUEST, [], true);
-        }
-        if($currentPassword != $updatedPassword) {
-            $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($updatedUser, $updatedPassword);
-            $updatedUser->setPassword($updatedPasswordHashed);
+        if ($newCustomer->getUser()){
+            if ($newCustomer->getUser()->getEmail()) {
+                $currentUser->setEmail($newCustomer->getUser()->getEmail());
+            }
+            if ($newCustomer->getUser()->getPassword()) {
+                $newPassword = $newCustomer->getUser()->getPassword();
+                if($this->validatorService->checkValidation($currentUser)) {
+                    return new JsonResponse(
+                        $this->serializer->serialize($this->validatorService->checkValidation($currentUser), 'json'),
+                        Response::HTTP_BAD_REQUEST, [], true);
+                }
+                if($currentPassword != $newPassword) {
+                    $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($currentUser, $newPassword);
+                    $currentUser->setPassword($updatedPasswordHashed);
+                }
+            }
         }
 
-        $this->entityManager->persist($updatedCustomer);
         $this->entityManager->flush();
 
         $this->cachePool->invalidateTags([stripslashes(Customer::class)]);
 
         $context = SerializationContext::create()->setGroups(['getCustomer']);
-        $jsonCustomer = $this->jmsSerializer->serialize($updatedCustomer, 'json', $context);
-        $location = $this->urlGenerator->generate('detailCustomer', ['id' => $updatedCustomer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $jsonCustomer = $this->serializer->serialize($currentCustomer, 'json', $context);
+        $location = $this->urlGenerator->generate('detailCustomer', ['id' => $currentCustomer->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonCustomer, Response::HTTP_OK, ["Location" => $location], true);
     }
