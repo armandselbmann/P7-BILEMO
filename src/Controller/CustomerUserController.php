@@ -4,12 +4,14 @@ namespace App\Controller;
 
 use App\Entity\CustomerUser;
 use App\Repository\CustomerRepository;
+use App\Services\ExistingObjectConstructor;
 use App\Services\PaginationService;
 use App\Services\ValidatorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
 use JMS\Serializer\SerializationContext;
+use JMS\Serializer\SerializerInterface;
 use Psr\Cache\InvalidArgumentException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,8 +22,6 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\Security;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use OpenApi\Annotations as OA;
@@ -65,9 +65,9 @@ class CustomerUserController extends AbstractController
      */
     private TagAwareCacheInterface $cachePool;
     /**
-     * @var \JMS\Serializer\SerializerInterface
+     * @var ExistingObjectConstructor
      */
-    private \JMS\Serializer\SerializerInterface $jmsSerializer;
+    private ExistingObjectConstructor $objectConstructor;
 
     /**
      * @param SerializerInterface $serializer
@@ -78,7 +78,7 @@ class CustomerUserController extends AbstractController
      * @param CustomerRepository $customerRepository
      * @param PaginationService $paginationService
      * @param TagAwareCacheInterface $cachePool
-     * @param \JMS\Serializer\SerializerInterface $jmsSerializer
+     * @param ExistingObjectConstructor $objectConstructor
      */
     public function __construct(
         SerializerInterface $serializer,
@@ -89,7 +89,7 @@ class CustomerUserController extends AbstractController
         CustomerRepository $customerRepository,
         PaginationService $paginationService,
         TagAwareCacheInterface $cachePool,
-        \JMS\Serializer\SerializerInterface $jmsSerializer
+        ExistingObjectConstructor $objectConstructor
     )
     {
         $this->serializer = $serializer;
@@ -100,7 +100,7 @@ class CustomerUserController extends AbstractController
         $this->customerRepository = $customerRepository;
         $this->paginationService = $paginationService;
         $this->cachePool = $cachePool;
-        $this->jmsSerializer = $jmsSerializer;
+        $this->objectConstructor = $objectConstructor;
     }
 
     /**
@@ -151,7 +151,7 @@ class CustomerUserController extends AbstractController
         }
 
         $context = SerializationContext::create()->setGroups(['getCustomerUserList']);
-        $jsonCustomerUserList = $this->jmsSerializer->serialize($customerUserList, 'json', $context);
+        $jsonCustomerUserList = $this->serializer->serialize($customerUserList, 'json', $context);
         return new JsonResponse($jsonCustomerUserList, Response::HTTP_OK, [], true);
     }
 
@@ -190,7 +190,7 @@ class CustomerUserController extends AbstractController
             }
         }
         $context = SerializationContext::create()->setGroups(['getCustomerUser']);
-        $jsonCustomerUser = $this->jmsSerializer->serialize($customerUser, 'json', $context);
+        $jsonCustomerUser = $this->serializer->serialize($customerUser, 'json', $context);
         return new JsonResponse($jsonCustomerUser, Response::HTTP_OK, [], true);
     }
 
@@ -225,7 +225,7 @@ class CustomerUserController extends AbstractController
     #[IsGranted('ROLE_CLIENT', message: 'Vous n\'avez pas les droits suffisants pour créer un utilisateur.')]
     public function createCustomerUser(Request $request): JsonResponse
     {
-        $customerUser = $this->jmsSerializer->deserialize($request->getContent(), CustomerUser::class, 'json');
+        $customerUser = $this->serializer->deserialize($request->getContent(), CustomerUser::class, 'json');
         $content = $request->toArray();
 
         $customerRoles = $this->security->getUser()->getRoles();
@@ -246,7 +246,7 @@ class CustomerUserController extends AbstractController
 
         if($this->validatorService->checkValidation($customerUser)) {
             return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($customerUser), 'json'),
+                $this->serializer->serialize($this->validatorService->checkValidation($customerUser), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
         $this->entityManager->persist($customerUser);
@@ -255,7 +255,7 @@ class CustomerUserController extends AbstractController
         $this->cachePool->invalidateTags([stripslashes(CustomerUser::class)]);
 
         $context = SerializationContext::create()->setGroups(['getCustomerUser']);
-        $jsonCustomerUser = $this->jmsSerializer->serialize($customerUser, 'json', $context);
+        $jsonCustomerUser = $this->serializer->serialize($customerUser, 'json', $context);
         $location = $this->urlGenerator->generate('detailCustomerUser', ['id' => $customerUser->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonCustomerUser, Response::HTTP_CREATED, ["Location" => $location], true);
@@ -293,11 +293,8 @@ class CustomerUserController extends AbstractController
     #[IsGranted('ROLE_CLIENT', message: 'Vous n\'avez pas les droits suffisants pour modifier un utilisateur.')]
     public function updateCustomerUser(Request $request, CustomerUser $currentCustomerUser): JsonResponse
     {
-        $updatedCustomerUser = $this->serializer->deserialize($request->getContent(),
-            CustomerUser::class,
-            'json',
-            [ AbstractNormalizer::OBJECT_TO_POPULATE => $currentCustomerUser]);
-        $content = $request->toArray();
+        $newCustomerUser = $this->serializer->deserialize($request->getContent(), CustomerUser::class, 'json');
+        $currentCustomerUser = $this->objectConstructor->customerUserConstructor($newCustomerUser, $currentCustomerUser);
 
         $customerRoles = $this->security->getUser()->getRoles();
         if(in_array('ROLE_CLIENT', $customerRoles)) {
@@ -306,30 +303,20 @@ class CustomerUserController extends AbstractController
             if($customerId != $customerUserId) {
                 throw new HttpException(403,'Vous ne pouvez pas modifier cet utilisateur.');
             }
-        } else {
-            if (!empty($content['idCustomer'])) {
-                $customerId = $content['idCustomer'];
-                if (!$this->customerRepository->findOneById($customerId)) {
-                    throw new HttpException(404, 'Ce client n\'existe pas.');
-                }
-                $updatedCustomerUser->setCustomers($this->customerRepository->findOneById($customerId));
-            }
         }
-
-        if($this->validatorService->checkValidation($updatedCustomerUser)) {
+        if($this->validatorService->checkValidation($currentCustomerUser)) {
             return new JsonResponse(
-                $this->jmsSerializer->serialize($this->validatorService->checkValidation($updatedCustomerUser), 'json'),
+                $this->serializer->serialize($this->validatorService->checkValidation($currentCustomerUser), 'json'),
                 Response::HTTP_BAD_REQUEST, [], true);
         }
 
-        $this->entityManager->persist($updatedCustomerUser);
         $this->entityManager->flush();
 
         $this->cachePool->invalidateTags([stripslashes(CustomerUser::class)]);
 
         $context = SerializationContext::create()->setGroups(['getCustomerUser']);
-        $jsonCustomerUser = $this->jmsSerializer->serialize($updatedCustomerUser, 'json', $context);
-        $location = $this->urlGenerator->generate('detailCustomerUser', ['id' => $updatedCustomerUser->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $jsonCustomerUser = $this->serializer->serialize($currentCustomerUser, 'json', $context);
+        $location = $this->urlGenerator->generate('detailCustomerUser', ['id' => $currentCustomerUser->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonCustomerUser, Response::HTTP_OK, ["Location" => $location], true);
     }
