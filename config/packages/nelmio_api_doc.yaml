@@ -13,6 +13,8 @@ nelmio_api_doc:
         - { alias: CustomerUser, type: App\Entity\CustomerUser, groups: [ getCustomerUser ] }
         - { alias: CustomerUser_light, type: App\Entity\CustomerUser, groups: [ getCustomerUserList ] }
         - { alias: CustomerUser_post_put, type: App\Entity\CustomerUser, groups: [ postPutCustomerUser ] }
+        - { alias: Image, type: App\Entity\Image, groups: [ getImage ] }
+
 
     documentation:
         info:

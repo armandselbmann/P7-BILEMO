@@ -66,11 +66,11 @@ class Product
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['getProductList', 'getProduct'])]
+    #[Groups(['getProductList', 'getProduct', 'getImage'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getProductList', 'getProduct', 'postPutProduct'])]
+    #[Groups(['getProductList', 'getProduct', 'postPutProduct', 'getImage'])]
     #[OA\Property(description: 'Smartphone reference. It is unique and does not match any other smartphone.')]
     #[Assert\NotBlank(message: "Vous devez saisir une référence.")]
     private ?string $reference = null;
