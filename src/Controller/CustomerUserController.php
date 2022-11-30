@@ -195,14 +195,14 @@ class CustomerUserController extends AbstractController
     }
 
     /**
-     * Create a Customer user --- ACCESS RESERVED FOR CUSTOMER ---
+     * Create a Customer user
      *
      * @param Request $request
      * @return JsonResponse
      * @throws InvalidArgumentException
      *
      * @OA\Post(
-     *     description="Create a new customer user. The customer user will automatically be linked to you. Access reserved for customer.",
+     *     description="Create a new customer user. For Customer : The customer user will automatically be linked to you.",
      *     tags = {"CustomerUsers"},
      *     @OA\RequestBody(
      *          description="Customer user that needs to be added.",
@@ -219,24 +219,28 @@ class CustomerUserController extends AbstractController
      *      ),
      *      @OA\Response(response="400", description="Bad Request: Invalid content"),
      *      @OA\Response(response=401, description="Unauthorized: Expired JWT Token/JWT Token not found"),
-     * )
+     *      @OA\Parameter(
+     *          name="idCustomer",
+     *          in="query",
+     *          description="For Employees and Administrators only. Enter the id of the Customer you want to linked to this customer user.",
+     *          @OA\Schema(type="int")
+     *      )
      */
     #[Route('/api/customer-users', name: 'createCustomerUser', methods: ['POST'])]
     #[IsGranted('ROLE_CLIENT', message: 'Vous n\'avez pas les droits suffisants pour créer un utilisateur.')]
     public function createCustomerUser(Request $request): JsonResponse
     {
         $customerUser = $this->serializer->deserialize($request->getContent(), CustomerUser::class, 'json');
-        $content = $request->toArray();
 
         $customerRoles = $this->security->getUser()->getRoles();
         if (in_array('ROLE_CLIENT', $customerRoles)) {
             $customerId = $this->security->getUser()->getCustomers()->getId();
-        } elseif (empty($customerId) && !empty($content['idCustomer'])) {
-                $customerId = $content['idCustomer'];
-            } else {
-                throw new HttpException(400,'Veuillez saisir un numéro de Client.');
+        } else {
+            $customerId = $request->get('idCustomer');
         }
-
+        if(empty($customerId)) {
+            throw new HttpException(400, 'Veuillez saisir un numéro de Client.');
+        }
         if (!$this->customerRepository->findOneById($customerId)) {
             throw new HttpException(404, 'Ce client n\'existe pas.');
         }
@@ -262,7 +266,7 @@ class CustomerUserController extends AbstractController
     }
 
     /**
-     * Update a Customer user --- ACCESS RESERVED FOR CUSTOMER ---
+     * Update a Customer user
      *
      * @param Request $request
      * @param CustomerUser $currentCustomerUser
@@ -270,7 +274,7 @@ class CustomerUserController extends AbstractController
      * @throws InvalidArgumentException
      *
      * @OA\Put(
-     *     description="Update a Customer user. Access reserved for customer.",
+     *     description="Update a Customer user. For Employees and Administrators : It's not possible to update a idCustomer linked to a CustomerUser.",
      *     tags = {"CustomerUsers"},
      *     @OA\RequestBody(
      *          description="Properties of an customer user that can be update.",

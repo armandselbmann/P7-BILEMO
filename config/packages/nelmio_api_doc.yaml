@@ -17,7 +17,7 @@ nelmio_api_doc:
     documentation:
         info:
             title: BILEMO
-            description: An API allowing access to a high-end smartphone catalog. Access is restricted to customers, employees and administrators of Bilemo, by JWT authentication.
+            description: An API allowing access to a high-end smartphone catalog. Access is restricted to customers, employees and administrators of Bilemo, by Json Web Token authentication.
             version: 1.0.0
         paths:
             /api/login_check:
@@ -27,7 +27,7 @@ nelmio_api_doc:
                         - Token
                     summary: Obtain the JWT token to log in.
                     requestBody:
-                        description: Obtain a new token.
+                        description: Obtain a new token. Use these data to connect with a Adminstrator account (username => bilemo@bilemo.com // password => bilemo) or an Employee account (username => employee@bilemo.com // password => password).
                         required: true
                         content:
                             application/json:
@@ -70,7 +70,7 @@ nelmio_api_doc:
                     description: You must type "bearer" and a space, before pasting the token.
                     type: apiKey
                     in: header
-                    name: Authorization # or another header name
+                    name: Authorization
         security:
             - bearerAuth: []
     areas: # to filter documented areas

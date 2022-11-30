@@ -142,11 +142,11 @@ class Customer
     private ?string $SIRET = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    #[Groups(['getCustomer', 'postPutCustomer'])]
+    #[Groups(['getCustomer'])]
     private ?\DateTimeInterface $createdAt = null;
 
     #[ORM\OneToMany(mappedBy: 'customers', targetEntity: CustomerUser::class, fetch: 'EAGER', orphanRemoval: true)]
-    #[Groups(['getCustomer', 'postPutCustomer'])]
+    #[Groups(['getCustomer'])]
     private Collection $customerUsers;
 
     #[ORM\OneToOne(mappedBy: 'customers', cascade: ['persist', 'remove'], fetch: 'EAGER')]
