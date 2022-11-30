@@ -5,9 +5,59 @@ namespace App\Entity;
 use App\Repository\EmployeeRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups;
+use JMS\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use Hateoas\Configuration\Annotation as Hateoas;
 
+/**
+ * @Hateoas\Relation(
+ *      "self",
+ *      href = @Hateoas\Route(
+ *          "detailEmployee",
+ *          parameters = { "id" = "expr(object.getId())" },
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(
+ *          groups = {"getEmployeeList", "getEmployee"},
+ *          excludeIf = "expr(not is_granted('ROLE_SUPER_ADMIN'))"
+ *      )
+ * )
+ * @Hateoas\Relation(
+ *      "create",
+ *      href = @Hateoas\Route(
+ *          "createEmployee",
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(
+ *          groups = {"getEmployeeList", "getEmployee"},
+ *          excludeIf = "expr(not is_granted('ROLE_SUPER_ADMIN'))"
+ *      )
+ * )
+ * @Hateoas\Relation(
+ *      "update",
+ *      href = @Hateoas\Route(
+ *          "updateEmployee",
+ *          parameters={"id"="expr(object.getId())"},
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(
+ *          groups = {"getEmployeeList", "getEmployee"},
+ *          excludeIf = "expr(not is_granted('ROLE_SUPER_ADMIN'))"
+ *      )
+ * )
+ * @Hateoas\Relation(
+ *      "delete",
+ *      href = @Hateoas\Route(
+ *          "deleteEmployee",
+ *          parameters={"id"="expr(object.getId())"},
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(
+ *          groups = {"getEmployeeList", "getEmployee"},
+ *          excludeIf = "expr(not is_granted('ROLE_SUPER_ADMIN'))"
+ *      )
+ * )
+ */
 #[ORM\Entity(repositoryClass: EmployeeRepository::class)]
 class Employee
 {
@@ -18,7 +68,7 @@ class Employee
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getEmployeeList', 'getEmployee'])]
+    #[Groups(['getEmployeeList', 'getEmployee', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir un nom.")]
     #[Assert\Length(
         min: 3,
@@ -28,7 +78,7 @@ class Employee
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getEmployeeList', 'getEmployee'])]
+    #[Groups(['getEmployeeList', 'getEmployee', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir un prénom.")]
     #[Assert\Length(
         min: 3,
@@ -38,7 +88,7 @@ class Employee
     private ?string $firstName = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getEmployee'])]
+    #[Groups(['getEmployee', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir un numéro de téléphone.")]
     #[Assert\Length(
         min: 4,
@@ -51,8 +101,8 @@ class Employee
     #[Groups(['getEmployee'])]
     private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\OneToOne(mappedBy: 'employees', cascade: ['persist', 'remove'])]
-    #[Groups(['getEmployee'])]
+    #[ORM\OneToOne(mappedBy: 'employees', cascade: ['persist', 'remove'], fetch: 'EAGER')]
+    #[Groups(['getEmployee', 'postPutEmployee'])]
     #[Assert\NotBlank(message: "Vous devez saisir une adresse mail et un mot de passe.")]
     private ?User $user = null;
 

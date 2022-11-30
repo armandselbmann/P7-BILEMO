@@ -5,9 +5,47 @@ namespace App\Entity;
 use App\Repository\CustomerUserRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups;
+use JMS\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use Hateoas\Configuration\Annotation as Hateoas;
 
+/**
+ * @Hateoas\Relation(
+ *      "self",
+ *      href = @Hateoas\Route(
+ *          "detailCustomerUser",
+ *          parameters = { "id" = "expr(object.getId())" },
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups = {"getCustomerUserList", "getCustomerUser"})
+ * )
+ * @Hateoas\Relation(
+ *      "create",
+ *      href = @Hateoas\Route(
+ *          "createCustomerUser",
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups = {"getCustomerUserList", "getCustomerUser"})
+ * )
+ * @Hateoas\Relation(
+ *      "update",
+ *      href = @Hateoas\Route(
+ *          "updateCustomerUser",
+ *          parameters={"id"="expr(object.getId())"},
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups = {"getCustomerUserList", "getCustomerUser"})
+ * )
+ * @Hateoas\Relation(
+ *      "delete",
+ *      href = @Hateoas\Route(
+ *          "deleteCustomerUser",
+ *          parameters={"id"="expr(object.getId())"},
+ *          absolute = true
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups = {"getCustomerUserList", "getCustomerUser"})
+ * )
+ */
 #[ORM\Entity(repositoryClass: CustomerUserRepository::class)]
 class CustomerUser
 {
@@ -18,7 +56,7 @@ class CustomerUser
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer'])]
+    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un nom.")]
     #[Assert\Length(
         min: 3,
@@ -28,7 +66,7 @@ class CustomerUser
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un prénom.")]
     #[Assert\Length(
         min: 3,
@@ -38,12 +76,12 @@ class CustomerUser
     private ?string $firstName = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer'])]
+    #[Groups(['getCustomerUserList', 'getCustomerUser', 'getCustomer', 'postPutCustomerUser'])]
     #[Assert\Email(message: 'Cet email {{ value }} n\'est pas valide')]
     private ?string $email = null;
 
     #[ORM\Column(length: 10)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un code postal.")]
     #[Assert\Length(
         min: 5,
@@ -51,12 +89,12 @@ class CustomerUser
     private ?string $postalCode = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir une adresse.")]
     private ?string $adress = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir une ville.")]
     #[Assert\Length(
         min: 3,
@@ -64,7 +102,7 @@ class CustomerUser
     private ?string $city = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un pays.")]
     #[Assert\Length(
         min: 3,
@@ -72,7 +110,7 @@ class CustomerUser
     private ?string $country = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['getCustomerUser'])]
+    #[Groups(['getCustomerUser', 'postPutCustomerUser'])]
     #[Assert\NotBlank(message: "Vous devez saisir un numéro de téléphone.")]
     #[Assert\Length(
         min: 4,
@@ -85,7 +123,7 @@ class CustomerUser
     #[Groups(['getCustomerUser'])]
     private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\ManyToOne(inversedBy: 'customerUsers')]
+    #[ORM\ManyToOne(fetch: 'EAGER', inversedBy: 'customerUsers')]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['getCustomerUserList', 'getCustomerUser'])]
     private ?Customer $customers = null;
