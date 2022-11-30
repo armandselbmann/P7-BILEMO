@@ -222,6 +222,8 @@ class EmployeeController extends AbstractController
         $user->setRoles(['ROLE_ADMIN']);
         $user->setEmployees($employee);
 
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($employee);
         $this->entityManager->flush();
 
         $this->cachePool->invalidateTags([stripslashes(Employee::class)]);
@@ -242,7 +244,7 @@ class EmployeeController extends AbstractController
      * @throws InvalidArgumentException
      *
      * @OA\Put(
-     *     description="Update a Employee. This operation does not allow to modify the images linked to a product. Access restricted to administrators.",
+     *     description="Update a Employee. Access restricted to administrators.",
      *     tags = {"Employees"},
      *     @OA\RequestBody(
      *          description="Properties of an employee that can be update.",
