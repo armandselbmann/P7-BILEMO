@@ -293,8 +293,8 @@ class CustomerController extends AbstractController
                         Response::HTTP_BAD_REQUEST, [], true);
                 }
                 if($currentPassword != $newPassword) {
-                    $updatedPasswordHashed = $this->userPasswordHasher->hashPassword($currentUser, $newPassword);
-                    $currentUser->setPassword($updatedPasswordHashed);
+                    $passwordHashed = $this->userPasswordHasher->hashPassword($currentUser, $newPassword);
+                    $currentUser->setPassword($passwordHashed);
                 }
             }
         }
