@@ -18,7 +18,7 @@ nelmio_api_doc:
 
     documentation:
         info:
-            title: BILEMO
+            title: BILEMO's API documentation
             description: An API allowing access to a high-end smartphone catalog. Access is restricted to customers, employees and administrators of Bilemo, by Json Web Token authentication.
             version: 1.0.0
         paths:

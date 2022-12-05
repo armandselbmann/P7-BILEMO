@@ -112,13 +112,13 @@ class ProductController extends AbstractController
      *          name="page",
      *          in="query",
      *          description="Page you want to consult.",
-     *          @OA\Schema(type="int")
+     *          @OA\Schema(type="int", default=PaginationService::PAGE_DEFAULT)
      *      ),
      *      @OA\Parameter(
      *          name="limit",
      *          in="query",
      *          description="The number of elements to be retrieved.",
-     *          @OA\Schema(type="int")
+     *          @OA\Schema(type="int", default=PaginationService::LIMIT_DEFAULT)
      *      )
      * )
      */

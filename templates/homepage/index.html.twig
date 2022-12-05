@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bilemo's API</title>
+    {% block stylesheets %}
+        <!-- CSS -->
+        <link rel="stylesheet" href="css/style.css">
+        <!-- favicon -->
+        <link rel="icon" href="images/favicon.png">
+    {% endblock %}
+</head>
+
+{% block body %}
+<body>
+    <div class="container">
+        <h1 class="text-center text-dark position-absolute top-50 start-50 translate-middle">Bilemo's API</h1>
+        <p>
+            Our API will allow you to access a catalog of high-end smartphones.<br>
+            This access is limited to Bilemo customers, employees and administrators, secured by an authentication system.
+        </p>
+        <p>
+            If you are interested in this API, you can reach us at this <a href="mailto:admin@armand-selbmann.fr">email</a>.<br>
+            In the meantime, do not hesitate to discover the <a href="{{ absolute_url('https://127.0.0.1:8000/api/doc') }}">documentation</a> through which you can test the API.
+        </p>
+    </div>
+</body>
+{% endblock %}
