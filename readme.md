@@ -87,12 +87,6 @@ Generate the private and public SSL keys
 ```
 php bin/console lexik:jwt:generate-keypair
 ```
-Configure the SSL keys path and passphrase in your .env
-```
-JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
-JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
-JWT_PASSPHRASE=
-```
 If you encounter a problem, do not hesitate to refer to the [documentation](https://symfony.com/bundles/LexikJWTAuthenticationBundle/current/index.html#configuration).
 
 ---
